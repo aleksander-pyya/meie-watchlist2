@@ -14,6 +14,20 @@ const firebaseConfig = {
 const TMDB_API_KEY = 'ee832f30efb14e179654a4803a61bfcd';
 const TMDB_IMG_BASE = 'https://image.tmdb.org/t/p/w300';
 
+// Provider IDs from TMDB for Estonia (EE)
+const PROVIDER_IDS = {
+  netflix: 8,
+  disney: 337,
+  hbo: 384, // HBO Max
+};
+
+const PLATFORMS = [
+  { id: 'netflix', name: 'Netflix', icon: '🔴', color: 'bg-red-600' },
+{ id: 'disney', name: 'Disney+', icon: '🏰', color: 'bg-blue-600' },
+{ id: 'hbo', name: 'HBO Max', icon: '💜', color: 'bg-purple-600' },
+{ id: 'go3', name: 'Go3', icon: '🟢', color: 'bg-green-600' },
+];
+
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 
@@ -21,6 +35,7 @@ const WatchlistApp = () => {
   const [activeTab, setActiveTab] = useState('shared');
   const [searchQuery, setSearchQuery] = useState('');
   const [sortBy, setSortBy] = useState('title');
+  const [filterPlatform, setFilterPlatform] = useState('all');
   const [movies, setMovies] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showAddForm, setShowAddForm] = useState(false);
@@ -28,6 +43,7 @@ const WatchlistApp = () => {
   const [tmdbResults, setTmdbResults] = useState([]);
   const [searching, setSearching] = useState(false);
   const [selectedOwner, setSelectedOwner] = useState('sassdaboss');
+  const [loadingProviders, setLoadingProviders] = useState({});
 
   useEffect(() => {
     const q = query(collection(db, 'movies'), orderBy('title'));
@@ -41,6 +57,46 @@ const WatchlistApp = () => {
     });
     return () => unsubscribe();
   }, []);
+
+  const fetchProviders = async (movie) => {
+    if (!movie.tmdbId || movie.providers) return;
+
+    setLoadingProviders(prev => ({ ...prev, [movie.id]: true }));
+
+    try {
+      const res = await fetch(
+        `https://api.themoviedb.org/3/movie/${movie.tmdbId}/watch/providers?api_key=${TMDB_API_KEY}`
+      );
+      const data = await res.json();
+
+      // Check Estonian (EE) providers, fallback to US
+      const regionData = data.results?.EE || data.results?.US || {};
+      const flatrate = regionData.flatrate || [];
+
+      const providers = [];
+      if (flatrate.some(p => p.provider_id === PROVIDER_IDS.netflix)) providers.push('netflix');
+      if (flatrate.some(p => p.provider_id === PROVIDER_IDS.disney)) providers.push('disney');
+      if (flatrate.some(p => p.provider_id === PROVIDER_IDS.hbo)) providers.push('hbo');
+
+      // Keep existing go3 if manually set
+      if (movie.providers?.includes('go3')) providers.push('go3');
+
+      await updateDoc(doc(db, 'movies', movie.id), { providers });
+    } catch (err) {
+      console.error('Provider fetch error:', err);
+    }
+
+    setLoadingProviders(prev => ({ ...prev, [movie.id]: false }));
+  };
+
+  const togglePlatform = async (movie, platform) => {
+    const currentProviders = movie.providers || [];
+    const newProviders = currentProviders.includes(platform)
+    ? currentProviders.filter(p => p !== platform)
+    : [...currentProviders, platform];
+
+    await updateDoc(doc(db, 'movies', movie.id), { providers: newProviders });
+  };
 
   const searchTMDB = async (query) => {
     if (!query.trim()) {
@@ -83,6 +139,7 @@ const WatchlistApp = () => {
                    tmdbId: tmdbMovie.id,
                    owners: [selectedOwner],
                    watched: false,
+                   providers: [],
                    createdAt: new Date()
       });
     }
@@ -118,10 +175,19 @@ const WatchlistApp = () => {
 
   const filterSort = (movieList) => {
     let f = movieList;
+
+    // Search filter
     if (searchQuery) {
       const q = searchQuery.toLowerCase();
-      f = movieList.filter(m => m.title.toLowerCase().includes(q) || (m.year && m.year.toString().includes(q)));
+      f = f.filter(m => m.title.toLowerCase().includes(q) || (m.year && m.year.toString().includes(q)));
     }
+
+    // Platform filter
+    if (filterPlatform !== 'all') {
+      f = f.filter(m => m.providers?.includes(filterPlatform));
+    }
+
+    // Sort
     return f.sort((a, b) => {
       if (sortBy === 'year') return (b.year || 0) - (a.year || 0);
       return a.title.localeCompare(b.title);
@@ -197,7 +263,8 @@ const WatchlistApp = () => {
     ))}
     </nav>
 
-    <div className="flex flex-col sm:flex-row gap-3 mb-6 max-w-2xl mx-auto">
+    {/* Filters */}
+    <div className="flex flex-col sm:flex-row gap-3 mb-6 max-w-4xl mx-auto">
     <div className="relative flex-1">
     <input
     type="text"
@@ -215,6 +282,17 @@ const WatchlistApp = () => {
     >
     <option value="title">Tähestiku järgi</option>
     <option value="year">Aasta järgi</option>
+    </select>
+    <select
+    value={filterPlatform}
+    onChange={(e) => setFilterPlatform(e.target.value)}
+    className="px-4 py-3 bg-slate-800/60 border border-slate-700/50 rounded-xl text-amber-200 focus:outline-none cursor-pointer"
+    >
+    <option value="all">🎬 Kõik platvormid</option>
+    <option value="netflix">🔴 Netflix</option>
+    <option value="disney">🏰 Disney+</option>
+    <option value="hbo">💜 HBO Max</option>
+    <option value="go3">🟢 Go3</option>
     </select>
     <button
     onClick={() => setShowAddForm(!showAddForm)}
@@ -309,8 +387,8 @@ const WatchlistApp = () => {
         )}
 
         {/* Hover actions */}
-        <div className="absolute inset-0 bg-black/80 opacity-0 group-hover:opacity-100 transition-all flex flex-col items-center justify-center gap-2 p-3">
-        <p className="text-amber-50 font-bold text-sm text-center line-clamp-2 mb-2">{movie.title}</p>
+        <div className="absolute inset-0 bg-black/80 opacity-0 group-hover:opacity-100 transition-all flex flex-col items-center justify-center gap-2 p-3 overflow-y-auto">
+        <p className="text-amber-50 font-bold text-sm text-center line-clamp-2">{movie.title}</p>
 
         <button
         onClick={() => toggleWatched(movie)}
@@ -323,6 +401,7 @@ const WatchlistApp = () => {
         {movie.watched ? '↩️ Vaatamata' : '✅ Nähtud'}
         </button>
 
+        {/* Owner buttons */}
         <div className="flex gap-1 w-full">
         <button
         onClick={() => toggleOwner(movie, 'sassdaboss')}
@@ -346,6 +425,38 @@ const WatchlistApp = () => {
         </button>
         </div>
 
+        {/* Platform buttons */}
+        <div className="w-full">
+        <div className="flex items-center justify-between mb-1">
+        <span className="text-amber-200/60 text-xs">Platvormid:</span>
+        {movie.tmdbId && !movie.providers?.length && (
+          <button
+          onClick={() => fetchProviders(movie)}
+          disabled={loadingProviders[movie.id]}
+          className="text-xs text-amber-400 hover:text-amber-300"
+          >
+          {loadingProviders[movie.id] ? '...' : '🔄 Otsi'}
+          </button>
+        )}
+        </div>
+        <div className="flex gap-1 flex-wrap">
+        {PLATFORMS.map(platform => (
+          <button
+          key={platform.id}
+          onClick={() => togglePlatform(movie, platform.id)}
+          className={`px-2 py-1 rounded text-xs font-medium transition-all ${
+            movie.providers?.includes(platform.id)
+            ? `${platform.color} text-white`
+            : 'bg-slate-600/50 text-slate-400'
+          }`}
+          title={platform.name}
+          >
+          {platform.icon}
+          </button>
+        ))}
+        </div>
+        </div>
+
         <button
         onClick={() => deleteMovie(movie.id)}
         className="w-full py-2 bg-red-500/80 hover:bg-red-400 text-white rounded-lg text-sm font-medium transition-all"
@@ -365,8 +476,22 @@ const WatchlistApp = () => {
         )}
         </div>
 
+        {/* Platform badges */}
+        {movie.providers?.length > 0 && (
+          <div className="absolute top-2 right-2 flex gap-0.5">
+          {movie.providers.map(p => {
+            const platform = PLATFORMS.find(pl => pl.id === p);
+            return platform ? (
+              <span key={p} className="text-sm drop-shadow" title={platform.name}>
+              {platform.icon}
+              </span>
+            ) : null;
+          })}
+          </div>
+        )}
+
         {movie.watched && (
-          <div className="absolute top-2 right-2">
+          <div className="absolute bottom-16 right-2">
           <span className="text-green-400 text-lg drop-shadow">✅</span>
           </div>
         )}
@@ -384,7 +509,7 @@ const WatchlistApp = () => {
       <div className="text-center py-20">
       <div className="text-6xl mb-4">🎞️</div>
       <p className="text-amber-200/60 text-lg">
-      {searchQuery ? 'Filme ei leitud' : 'Lisa esimene film! ➕'}
+      {searchQuery || filterPlatform !== 'all' ? 'Filme ei leitud' : 'Lisa esimene film! ➕'}
       </p>
       </div>
     )}
