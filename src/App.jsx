@@ -9,8 +9,10 @@ const firebaseConfig = {
   storageBucket: "watchlist-b0d26.firebasestorage.app",
   messagingSenderId: "957805618122",
   appId: "1:957805618122:web:f7316be42ab6d8003f2533",
-  measurementId: "G-C4YG9PMPNN"
 };
+
+const TMDB_API_KEY = 'ee832f30efb14e179654a4803a61bfcd';
+const TMDB_IMG_BASE = 'https://image.tmdb.org/t/p/w300';
 
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
@@ -21,8 +23,11 @@ const WatchlistApp = () => {
   const [sortBy, setSortBy] = useState('title');
   const [movies, setMovies] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [newMovie, setNewMovie] = useState({ title: '', year: '', owner: 'sassdaboss' });
   const [showAddForm, setShowAddForm] = useState(false);
+  const [tmdbSearch, setTmdbSearch] = useState('');
+  const [tmdbResults, setTmdbResults] = useState([]);
+  const [searching, setSearching] = useState(false);
+  const [selectedOwner, setSelectedOwner] = useState('sassdaboss');
 
   useEffect(() => {
     const q = query(collection(db, 'movies'), orderBy('title'));
@@ -37,19 +42,52 @@ const WatchlistApp = () => {
     return () => unsubscribe();
   }, []);
 
-  const addMovie = async (e) => {
-    e.preventDefault();
-    if (!newMovie.title.trim()) return;
+  const searchTMDB = async (query) => {
+    if (!query.trim()) {
+      setTmdbResults([]);
+      return;
+    }
+    setSearching(true);
+    try {
+      const res = await fetch(
+        `https://api.themoviedb.org/3/search/movie?api_key=${TMDB_API_KEY}&query=${encodeURIComponent(query)}&language=et-EE`
+      );
+      const data = await res.json();
+      setTmdbResults(data.results?.slice(0, 8) || []);
+    } catch (err) {
+      console.error('TMDB search error:', err);
+    }
+    setSearching(false);
+  };
 
-    await addDoc(collection(db, 'movies'), {
-      title: newMovie.title.trim(),
-                 year: newMovie.year ? parseInt(newMovie.year) : null,
-                 owners: [newMovie.owner],
-                 watched: false,
-                 createdAt: new Date()
-    });
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (tmdbSearch) searchTMDB(tmdbSearch);
+    }, 300);
+      return () => clearTimeout(timer);
+  }, [tmdbSearch]);
 
-    setNewMovie({ title: '', year: '', owner: 'sassdaboss' });
+  const addMovieFromTMDB = async (tmdbMovie) => {
+    const exists = movies.find(m => m.tmdbId === tmdbMovie.id);
+    if (exists) {
+      if (!exists.owners.includes(selectedOwner)) {
+        await updateDoc(doc(db, 'movies', exists.id), {
+          owners: [...exists.owners, selectedOwner]
+        });
+      }
+    } else {
+      await addDoc(collection(db, 'movies'), {
+        title: tmdbMovie.title,
+        year: tmdbMovie.release_date ? parseInt(tmdbMovie.release_date.split('-')[0]) : null,
+                   poster: tmdbMovie.poster_path,
+                   tmdbId: tmdbMovie.id,
+                   owners: [selectedOwner],
+                   watched: false,
+                   createdAt: new Date()
+      });
+    }
+    setTmdbSearch('');
+    setTmdbResults([]);
     setShowAddForm(false);
   };
 
@@ -187,40 +225,61 @@ const WatchlistApp = () => {
     </div>
 
     {showAddForm && (
-      <form onSubmit={addMovie} className="mb-8 p-6 bg-slate-800/60 rounded-2xl max-w-2xl mx-auto">
+      <div className="mb-8 p-6 bg-slate-800/60 rounded-2xl max-w-2xl mx-auto">
       <h3 className="text-amber-100 font-bold mb-4 text-lg">Lisa uus film</h3>
-      <div className="flex flex-col sm:flex-row gap-3">
-      <input
-      type="text"
-      value={newMovie.title}
-      onChange={(e) => setNewMovie({...newMovie, title: e.target.value})}
-      placeholder="Filmi nimi"
-      className="flex-1 px-4 py-3 bg-slate-700/50 border border-slate-600/50 rounded-xl text-amber-50 placeholder-slate-400 focus:outline-none focus:border-amber-500/50"
-      required
-      />
-      <input
-      type="number"
-      value={newMovie.year}
-      onChange={(e) => setNewMovie({...newMovie, year: e.target.value})}
-      placeholder="Aasta"
-      className="w-24 px-4 py-3 bg-slate-700/50 border border-slate-600/50 rounded-xl text-amber-50 placeholder-slate-400 focus:outline-none focus:border-amber-500/50"
-      />
+      <div className="flex gap-3 mb-4">
       <select
-      value={newMovie.owner}
-      onChange={(e) => setNewMovie({...newMovie, owner: e.target.value})}
+      value={selectedOwner}
+      onChange={(e) => setSelectedOwner(e.target.value)}
       className="px-4 py-3 bg-slate-700/50 border border-slate-600/50 rounded-xl text-amber-200 focus:outline-none cursor-pointer"
       >
       <option value="sassdaboss">sassdaboss</option>
       <option value="katherinefierce">katherinefierce</option>
       </select>
-      <button
-      type="submit"
-      className="px-6 py-3 bg-amber-500 hover:bg-amber-400 text-slate-900 font-bold rounded-xl transition-all"
-      >
-      Lisa
-      </button>
       </div>
-      </form>
+      <div className="relative">
+      <input
+      type="text"
+      value={tmdbSearch}
+      onChange={(e) => setTmdbSearch(e.target.value)}
+      placeholder="Otsi filmi nime järgi..."
+      className="w-full px-4 py-3 bg-slate-700/50 border border-slate-600/50 rounded-xl text-amber-50 placeholder-slate-400 focus:outline-none focus:border-amber-500/50"
+      />
+      {searching && (
+        <div className="absolute right-4 top-1/2 -translate-y-1/2">
+        <div className="w-5 h-5 border-2 border-amber-500 border-t-transparent rounded-full animate-spin"></div>
+        </div>
+      )}
+      </div>
+
+      {tmdbResults.length > 0 && (
+        <div className="mt-4 grid grid-cols-2 sm:grid-cols-4 gap-3 max-h-96 overflow-y-auto">
+        {tmdbResults.map(movie => (
+          <button
+          key={movie.id}
+          onClick={() => addMovieFromTMDB(movie)}
+          className="bg-slate-700/50 rounded-lg overflow-hidden hover:ring-2 hover:ring-amber-500 transition-all text-left"
+          >
+          {movie.poster_path ? (
+            <img
+            src={`${TMDB_IMG_BASE}${movie.poster_path}`}
+            alt={movie.title}
+            className="w-full aspect-[2/3] object-cover"
+            />
+          ) : (
+            <div className="w-full aspect-[2/3] bg-slate-600 flex items-center justify-center">
+            <span className="text-4xl">🎬</span>
+            </div>
+          )}
+          <div className="p-2">
+          <p className="text-amber-50 text-xs font-medium line-clamp-2">{movie.title}</p>
+          <p className="text-amber-200/50 text-xs">{movie.release_date?.split('-')[0]}</p>
+          </div>
+          </button>
+        ))}
+        </div>
+      )}
+      </div>
     )}
 
     <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
@@ -233,14 +292,26 @@ const WatchlistApp = () => {
           isShared ? 'ring-2 ring-rose-500/30' : ''
         } ${movie.watched ? 'opacity-60' : ''}`}
         >
-        <div className="aspect-[2/3] bg-gradient-to-br from-slate-700/50 to-slate-800/50 flex items-center justify-center relative">
-        <div className="text-center p-3">
-        <div className="text-4xl mb-2">{movie.watched ? '✅' : '🎬'}</div>
-        <p className="text-amber-100/60 text-xs leading-tight line-clamp-3">{movie.title}</p>
-        </div>
+        <div className="aspect-[2/3] bg-gradient-to-br from-slate-700/50 to-slate-800/50 relative overflow-hidden">
+        {movie.poster ? (
+          <img
+          src={`${TMDB_IMG_BASE}${movie.poster}`}
+          alt={movie.title}
+          className="w-full h-full object-cover"
+          />
+        ) : (
+          <div className="w-full h-full flex items-center justify-center">
+          <div className="text-center p-3">
+          <div className="text-4xl mb-2">🎬</div>
+          <p className="text-amber-100/60 text-xs leading-tight line-clamp-3">{movie.title}</p>
+          </div>
+          </div>
+        )}
 
         {/* Hover actions */}
-        <div className="absolute inset-0 bg-black/70 opacity-0 group-hover:opacity-100 transition-all flex flex-col items-center justify-center gap-2 p-2">
+        <div className="absolute inset-0 bg-black/80 opacity-0 group-hover:opacity-100 transition-all flex flex-col items-center justify-center gap-2 p-3">
+        <p className="text-amber-50 font-bold text-sm text-center line-clamp-2 mb-2">{movie.title}</p>
+
         <button
         onClick={() => toggleWatched(movie)}
         className={`w-full py-2 rounded-lg text-sm font-medium transition-all ${
@@ -287,16 +358,16 @@ const WatchlistApp = () => {
         {/* Owner badges */}
         <div className="absolute top-2 left-2 flex gap-1">
         {movie.owners?.includes('sassdaboss') && (
-          <span className="px-1.5 py-0.5 bg-cyan-500/90 text-white text-[10px] font-bold rounded-full">S</span>
+          <span className="px-1.5 py-0.5 bg-cyan-500/90 text-white text-[10px] font-bold rounded-full shadow">S</span>
         )}
         {movie.owners?.includes('katherinefierce') && (
-          <span className="px-1.5 py-0.5 bg-rose-500/90 text-white text-[10px] font-bold rounded-full">K</span>
+          <span className="px-1.5 py-0.5 bg-rose-500/90 text-white text-[10px] font-bold rounded-full shadow">K</span>
         )}
         </div>
 
         {movie.watched && (
           <div className="absolute top-2 right-2">
-          <span className="text-green-400 text-lg">✅</span>
+          <span className="text-green-400 text-lg drop-shadow">✅</span>
           </div>
         )}
 
