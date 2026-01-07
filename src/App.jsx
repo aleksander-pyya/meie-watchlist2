@@ -1,95 +1,104 @@
 import React, { useState, useMemo, useEffect } from 'react';
+import { initializeApp } from 'firebase/app';
+import { getFirestore, collection, addDoc, deleteDoc, doc, updateDoc, onSnapshot, query, orderBy } from 'firebase/firestore';
 
-const SHEET_ID = '1AGcvaJ3vWVN8OmzJ2PqQdA06A7lgQKqdkMOFd3khuFA';
+const firebaseConfig = {
+  apiKey: "AIzaSyAzPRXys5y8IeefUcNoo9KSYYHx2SW616o",
+  authDomain: "watchlist-b0d26.firebaseapp.com",
+  projectId: "watchlist-b0d26",
+  storageBucket: "watchlist-b0d26.firebasestorage.app",
+  messagingSenderId: "957805618122",
+  appId: "1:957805618122:web:f7316be42ab6d8003f2533",
+  measurementId: "G-C4YG9PMPNN"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
 
 const WatchlistApp = () => {
   const [activeTab, setActiveTab] = useState('shared');
   const [searchQuery, setSearchQuery] = useState('');
   const [sortBy, setSortBy] = useState('title');
-  const [user1Movies, setUser1Movies] = useState([]);
-  const [user2Movies, setUser2Movies] = useState([]);
+  const [movies, setMovies] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-  const [lastUpdated, setLastUpdated] = useState(null);
-
-  const fetchSheetData = async (sheetName) => {
-    const url = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json&sheet=${encodeURIComponent(sheetName)}`;
-    const response = await fetch(url);
-    const text = await response.text();
-    const json = JSON.parse(text.substring(47, text.length - 2));
-
-    const rows = json.table.rows;
-    return rows.slice(1).map((row, i) => ({
-      id: i,
-      title: row.c[0]?.v || '',
-      year: row.c[1]?.v || null
-    })).filter(m => m.title);
-  };
-
-  const loadData = async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const [data1, data2] = await Promise.all([
-        fetchSheetData('sassdaboss'),
-                                               fetchSheetData('katherinefierce')
-      ]);
-      setUser1Movies(data1);
-      setUser2Movies(data2);
-      setLastUpdated(new Date());
-    } catch (err) {
-      setError('Viga andmete laadimisel. Kontrolli, kas Sheet on avalik.');
-      console.error(err);
-    }
-    setLoading(false);
-  };
+  const [newMovie, setNewMovie] = useState({ title: '', year: '', owner: 'sassdaboss' });
+  const [showAddForm, setShowAddForm] = useState(false);
 
   useEffect(() => {
-    loadData();
+    const q = query(collection(db, 'movies'), orderBy('title'));
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const movieList = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      }));
+      setMovies(movieList);
+      setLoading(false);
+    });
+    return () => unsubscribe();
   }, []);
 
-  const normalize = (t) => t.toLowerCase().trim();
+  const addMovie = async (e) => {
+    e.preventDefault();
+    if (!newMovie.title.trim()) return;
 
-  const sharedMovies = useMemo(() => {
-    const titles1 = new Set(user1Movies.map(m => normalize(m.title)));
-    return user2Movies.filter(m => titles1.has(normalize(m.title)));
-  }, [user1Movies, user2Movies]);
-
-  const combinedMovies = useMemo(() => {
-    const all = [...user1Movies];
-    const titles1 = new Set(user1Movies.map(m => normalize(m.title)));
-    user2Movies.forEach((m, i) => {
-      if (!titles1.has(normalize(m.title))) all.push({ ...m, id: 1000 + i });
+    await addDoc(collection(db, 'movies'), {
+      title: newMovie.title.trim(),
+                 year: newMovie.year ? parseInt(newMovie.year) : null,
+                 owners: [newMovie.owner],
+                 watched: false,
+                 createdAt: new Date()
     });
-    return all;
-  }, [user1Movies, user2Movies]);
 
-  const getOwner = (movie) => {
-    const t = normalize(movie.title);
-    const o = [];
-    if (user1Movies.some(m => normalize(m.title) === t)) o.push(1);
-    if (user2Movies.some(m => normalize(m.title) === t)) o.push(2);
-    return o;
+    setNewMovie({ title: '', year: '', owner: 'sassdaboss' });
+    setShowAddForm(false);
   };
 
-  const filterSort = (movies) => {
-    let f = movies;
+  const toggleOwner = async (movie, owner) => {
+    const newOwners = movie.owners.includes(owner)
+    ? movie.owners.filter(o => o !== owner)
+    : [...movie.owners, owner];
+
+    if (newOwners.length === 0) {
+      await deleteDoc(doc(db, 'movies', movie.id));
+    } else {
+      await updateDoc(doc(db, 'movies', movie.id), { owners: newOwners });
+    }
+  };
+
+  const toggleWatched = async (movie) => {
+    await updateDoc(doc(db, 'movies', movie.id), { watched: !movie.watched });
+  };
+
+  const deleteMovie = async (movieId) => {
+    await deleteDoc(doc(db, 'movies', movieId));
+  };
+
+  const user1Movies = movies.filter(m => m.owners?.includes('sassdaboss'));
+  const user2Movies = movies.filter(m => m.owners?.includes('katherinefierce'));
+  const sharedMovies = movies.filter(m => m.owners?.includes('sassdaboss') && m.owners?.includes('katherinefierce'));
+  const unwatchedShared = sharedMovies.filter(m => !m.watched);
+
+  const filterSort = (movieList) => {
+    let f = movieList;
     if (searchQuery) {
       const q = searchQuery.toLowerCase();
-      f = movies.filter(m => m.title.toLowerCase().includes(q) || (m.year && m.year.toString().includes(q)));
+      f = movieList.filter(m => m.title.toLowerCase().includes(q) || (m.year && m.year.toString().includes(q)));
     }
-    return f.sort((a, b) => sortBy === 'year' ? (b.year || 0) - (a.year || 0) : a.title.localeCompare(b.title));
+    return f.sort((a, b) => {
+      if (sortBy === 'year') return (b.year || 0) - (a.year || 0);
+      return a.title.localeCompare(b.title);
+    });
   };
 
-  const movies = filterSort(
+  const displayMovies = filterSort(
     activeTab === 'shared' ? sharedMovies :
-    activeTab === 'combined' ? combinedMovies :
+    activeTab === 'all' ? movies :
     activeTab === 'user1' ? user1Movies : user2Movies
   );
 
   const tabs = [
     { id: 'shared', label: '💕 Ühised', count: sharedMovies.length },
-    { id: 'combined', label: '🎬 Kõik', count: combinedMovies.length },
+    { id: 'all', label: '🎬 Kõik', count: movies.length },
     { id: 'user1', label: '👤 sassdaboss', count: user1Movies.length },
     { id: 'user2', label: '👤 katherinefierce', count: user2Movies.length },
   ];
@@ -100,23 +109,6 @@ const WatchlistApp = () => {
       <div className="text-center">
       <div className="text-6xl mb-4 animate-bounce">🎬</div>
       <p className="text-amber-200 text-xl">Laadin filme...</p>
-      </div>
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 flex items-center justify-center">
-      <div className="text-center p-8 bg-slate-800/50 rounded-2xl max-w-md">
-      <div className="text-6xl mb-4">😕</div>
-      <p className="text-red-400 text-lg mb-4">{error}</p>
-      <button
-      onClick={loadData}
-      className="px-6 py-3 bg-amber-500 hover:bg-amber-400 text-slate-900 font-bold rounded-xl transition-all"
-      >
-      Proovi uuesti
-      </button>
       </div>
       </div>
     );
@@ -138,25 +130,13 @@ const WatchlistApp = () => {
     <span className="ml-3">💕</span>
     </h1>
     <p className="text-amber-200/60 text-lg">sassdaboss & katherinefierce</p>
-    <button
-    onClick={loadData}
-    className="mt-4 px-4 py-2 bg-slate-800/60 hover:bg-slate-700/60 text-amber-200/80 rounded-lg text-sm transition-all inline-flex items-center gap-2"
-    >
-    🔄 Värskenda
-    {lastUpdated && (
-      <span className="text-amber-200/40">
-      ({lastUpdated.toLocaleTimeString('et-EE')})
-      </span>
-    )}
-    </button>
     </header>
 
-    {activeTab === 'shared' && sharedMovies.length > 0 && (
+    {activeTab === 'shared' && unwatchedShared.length > 0 && (
       <div className="mb-8 p-6 bg-gradient-to-r from-rose-500/10 via-pink-500/10 to-orange-500/10 rounded-2xl border border-rose-500/20 text-center">
       <p className="text-xl text-rose-100">
-      🎉 Teil on <span className="font-bold text-rose-300 text-2xl">{sharedMovies.length}</span> ühist filmi! 🎉
+      🎉 Teil on <span className="font-bold text-rose-300 text-2xl">{unwatchedShared.length}</span> vaatamata ühist filmi! 🎉
       </p>
-      <p className="text-rose-200/60 mt-2">Need sobivad ideaalselt ühiseks filmiõhtuks</p>
       </div>
     )}
 
@@ -179,7 +159,7 @@ const WatchlistApp = () => {
     ))}
     </nav>
 
-    <div className="flex flex-col sm:flex-row gap-3 mb-8 max-w-2xl mx-auto">
+    <div className="flex flex-col sm:flex-row gap-3 mb-6 max-w-2xl mx-auto">
     <div className="relative flex-1">
     <input
     type="text"
@@ -198,34 +178,130 @@ const WatchlistApp = () => {
     <option value="title">Tähestiku järgi</option>
     <option value="year">Aasta järgi</option>
     </select>
+    <button
+    onClick={() => setShowAddForm(!showAddForm)}
+    className="px-5 py-3 bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-400 hover:to-emerald-400 text-white font-bold rounded-xl transition-all"
+    >
+    ➕ Lisa
+    </button>
     </div>
 
+    {showAddForm && (
+      <form onSubmit={addMovie} className="mb-8 p-6 bg-slate-800/60 rounded-2xl max-w-2xl mx-auto">
+      <h3 className="text-amber-100 font-bold mb-4 text-lg">Lisa uus film</h3>
+      <div className="flex flex-col sm:flex-row gap-3">
+      <input
+      type="text"
+      value={newMovie.title}
+      onChange={(e) => setNewMovie({...newMovie, title: e.target.value})}
+      placeholder="Filmi nimi"
+      className="flex-1 px-4 py-3 bg-slate-700/50 border border-slate-600/50 rounded-xl text-amber-50 placeholder-slate-400 focus:outline-none focus:border-amber-500/50"
+      required
+      />
+      <input
+      type="number"
+      value={newMovie.year}
+      onChange={(e) => setNewMovie({...newMovie, year: e.target.value})}
+      placeholder="Aasta"
+      className="w-24 px-4 py-3 bg-slate-700/50 border border-slate-600/50 rounded-xl text-amber-50 placeholder-slate-400 focus:outline-none focus:border-amber-500/50"
+      />
+      <select
+      value={newMovie.owner}
+      onChange={(e) => setNewMovie({...newMovie, owner: e.target.value})}
+      className="px-4 py-3 bg-slate-700/50 border border-slate-600/50 rounded-xl text-amber-200 focus:outline-none cursor-pointer"
+      >
+      <option value="sassdaboss">sassdaboss</option>
+      <option value="katherinefierce">katherinefierce</option>
+      </select>
+      <button
+      type="submit"
+      className="px-6 py-3 bg-amber-500 hover:bg-amber-400 text-slate-900 font-bold rounded-xl transition-all"
+      >
+      Lisa
+      </button>
+      </div>
+      </form>
+    )}
+
     <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
-    {movies.map((movie, i) => {
-      const owners = getOwner(movie);
-      const isShared = owners.length === 2;
+    {displayMovies.map((movie) => {
+      const isShared = movie.owners?.length === 2;
       return (
         <div
-        key={`${movie.id}-${i}`}
-        className={`group relative bg-gradient-to-br from-slate-800/80 to-slate-900/80 rounded-xl overflow-hidden shadow-lg hover:shadow-xl transition-all duration-300 hover:-translate-y-1 ${isShared ? 'ring-2 ring-rose-500/30' : ''}`}
+        key={movie.id}
+        className={`group relative bg-gradient-to-br from-slate-800/80 to-slate-900/80 rounded-xl overflow-hidden shadow-lg transition-all duration-300 hover:-translate-y-1 ${
+          isShared ? 'ring-2 ring-rose-500/30' : ''
+        } ${movie.watched ? 'opacity-60' : ''}`}
         >
-        <div className="aspect-[2/3] bg-gradient-to-br from-slate-700/50 to-slate-800/50 flex items-center justify-center">
+        <div className="aspect-[2/3] bg-gradient-to-br from-slate-700/50 to-slate-800/50 flex items-center justify-center relative">
         <div className="text-center p-3">
-        <div className="text-4xl mb-2">🎬</div>
+        <div className="text-4xl mb-2">{movie.watched ? '✅' : '🎬'}</div>
         <p className="text-amber-100/60 text-xs leading-tight line-clamp-3">{movie.title}</p>
         </div>
+
+        {/* Hover actions */}
+        <div className="absolute inset-0 bg-black/70 opacity-0 group-hover:opacity-100 transition-all flex flex-col items-center justify-center gap-2 p-2">
+        <button
+        onClick={() => toggleWatched(movie)}
+        className={`w-full py-2 rounded-lg text-sm font-medium transition-all ${
+          movie.watched
+          ? 'bg-amber-500/80 hover:bg-amber-400 text-slate-900'
+          : 'bg-green-500/80 hover:bg-green-400 text-white'
+        }`}
+        >
+        {movie.watched ? '↩️ Vaatamata' : '✅ Nähtud'}
+        </button>
+
+        <div className="flex gap-1 w-full">
+        <button
+        onClick={() => toggleOwner(movie, 'sassdaboss')}
+        className={`flex-1 py-2 rounded-lg text-xs font-medium transition-all ${
+          movie.owners?.includes('sassdaboss')
+          ? 'bg-cyan-500 text-white'
+          : 'bg-slate-600 text-slate-300'
+        }`}
+        >
+        S
+        </button>
+        <button
+        onClick={() => toggleOwner(movie, 'katherinefierce')}
+        className={`flex-1 py-2 rounded-lg text-xs font-medium transition-all ${
+          movie.owners?.includes('katherinefierce')
+          ? 'bg-rose-500 text-white'
+          : 'bg-slate-600 text-slate-300'
+        }`}
+        >
+        K
+        </button>
         </div>
-        {activeTab === 'combined' && (
-          <div className="absolute top-2 left-2 flex gap-1">
-          {owners.includes(1) && <span className="px-1.5 py-0.5 bg-cyan-500/90 text-white text-[10px] font-bold rounded-full">S</span>}
-          {owners.includes(2) && <span className="px-1.5 py-0.5 bg-rose-500/90 text-white text-[10px] font-bold rounded-full">K</span>}
+
+        <button
+        onClick={() => deleteMovie(movie.id)}
+        className="w-full py-2 bg-red-500/80 hover:bg-red-400 text-white rounded-lg text-sm font-medium transition-all"
+        >
+        🗑️ Kustuta
+        </button>
+        </div>
+        </div>
+
+        {/* Owner badges */}
+        <div className="absolute top-2 left-2 flex gap-1">
+        {movie.owners?.includes('sassdaboss') && (
+          <span className="px-1.5 py-0.5 bg-cyan-500/90 text-white text-[10px] font-bold rounded-full">S</span>
+        )}
+        {movie.owners?.includes('katherinefierce') && (
+          <span className="px-1.5 py-0.5 bg-rose-500/90 text-white text-[10px] font-bold rounded-full">K</span>
+        )}
+        </div>
+
+        {movie.watched && (
+          <div className="absolute top-2 right-2">
+          <span className="text-green-400 text-lg">✅</span>
           </div>
         )}
-        {isShared && activeTab !== 'combined' && (
-          <div className="absolute top-2 right-2"><span className="text-rose-400 text-lg">💕</span></div>
-        )}
+
         <div className="p-3">
-        <h3 className="font-semibold text-amber-50 text-sm leading-tight line-clamp-2 group-hover:text-amber-300 transition-colors">{movie.title}</h3>
+        <h3 className="font-semibold text-amber-50 text-sm leading-tight line-clamp-2">{movie.title}</h3>
         {movie.year && <p className="text-amber-200/50 text-xs mt-1">{movie.year}</p>}
         </div>
         </div>
@@ -233,25 +309,19 @@ const WatchlistApp = () => {
     })}
     </div>
 
-    {movies.length === 0 && (
+    {displayMovies.length === 0 && (
       <div className="text-center py-20">
       <div className="text-6xl mb-4">🎞️</div>
-      <p className="text-amber-200/60 text-lg">{searchQuery ? 'Filme ei leitud' : 'Tühi nimekiri'}</p>
+      <p className="text-amber-200/60 text-lg">
+      {searchQuery ? 'Filme ei leitud' : 'Lisa esimene film! ➕'}
+      </p>
       </div>
     )}
 
     <footer className="mt-12 text-center">
-    <p className="text-amber-200/40 text-sm mb-2">
-    Kokku {combinedMovies.length} unikaalset filmi • {sharedMovies.length} ühist filmi
+    <p className="text-amber-200/40 text-sm">
+    Kokku {movies.length} filmi • {sharedMovies.length} ühist • {movies.filter(m => m.watched).length} nähtud
     </p>
-    <a
-    href={`https://docs.google.com/spreadsheets/d/${SHEET_ID}/edit`}
-    target="_blank"
-    rel="noopener noreferrer"
-    className="text-amber-400/60 hover:text-amber-300 text-sm underline"
-    >
-    📝 Muuda Google Sheetis
-    </a>
     </footer>
     </div>
     </div>
