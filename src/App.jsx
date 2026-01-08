@@ -44,6 +44,9 @@ const WatchlistApp = () => {
   const [selectedOwner, setSelectedOwner] = useState('sassdaboss');
   const [selectedMovie, setSelectedMovie] = useState(null);
   const [loadingProviders, setLoadingProviders] = useState(false);
+  const [showRandomizer, setShowRandomizer] = useState(false);
+  const [randomMovie, setRandomMovie] = useState(null);
+  const [isSpinning, setIsSpinning] = useState(false);
 
   useEffect(() => {
     const q = query(collection(db, 'movies'), orderBy('title'));
@@ -58,13 +61,63 @@ const WatchlistApp = () => {
     return () => unsubscribe();
   }, []);
 
-  // Update selected movie when movies change
   useEffect(() => {
     if (selectedMovie) {
       const updated = movies.find(m => m.id === selectedMovie.id);
       if (updated) setSelectedMovie(updated);
     }
+    if (randomMovie) {
+      const updated = movies.find(m => m.id === randomMovie.id);
+      if (updated) setRandomMovie(updated);
+    }
   }, [movies]);
+
+  const user1Movies = movies.filter(m => m.owners?.includes('sassdaboss'));
+  const user2Movies = movies.filter(m => m.owners?.includes('katherinefierce'));
+  const sharedMovies = movies.filter(m => m.owners?.includes('sassdaboss') && m.owners?.includes('katherinefierce'));
+  const unwatchedShared = sharedMovies.filter(m => !m.watched);
+
+  const pickRandomMovie = (source) => {
+    let sourceMovies;
+    switch (source) {
+      case 'shared':
+        sourceMovies = sharedMovies.filter(m => !m.watched);
+        break;
+      case 'sassdaboss':
+        sourceMovies = user1Movies.filter(m => !m.watched);
+        break;
+      case 'katherinefierce':
+        sourceMovies = user2Movies.filter(m => !m.watched);
+        break;
+      default:
+        sourceMovies = movies.filter(m => !m.watched);
+    }
+
+    if (sourceMovies.length === 0) {
+      alert('Selles nimekirjas pole vaatamata filme!');
+      return;
+    }
+
+    setIsSpinning(true);
+    setRandomMovie(null);
+
+    // Spinning animation - show random movies quickly
+    let count = 0;
+    const maxCount = 15;
+    const interval = setInterval(() => {
+      const randomIndex = Math.floor(Math.random() * sourceMovies.length);
+      setRandomMovie(sourceMovies[randomIndex]);
+      count++;
+
+      if (count >= maxCount) {
+        clearInterval(interval);
+        setIsSpinning(false);
+        // Final pick
+        const finalIndex = Math.floor(Math.random() * sourceMovies.length);
+        setRandomMovie(sourceMovies[finalIndex]);
+      }
+    }, 100);
+  };
 
   const fetchProviders = async (movie) => {
     if (!movie.tmdbId) return;
@@ -162,6 +215,7 @@ const WatchlistApp = () => {
     if (newOwners.length === 0) {
       await deleteDoc(doc(db, 'movies', movie.id));
       setSelectedMovie(null);
+      setRandomMovie(null);
     } else {
       await updateDoc(doc(db, 'movies', movie.id), { owners: newOwners });
     }
@@ -174,12 +228,8 @@ const WatchlistApp = () => {
   const deleteMovie = async (movieId) => {
     await deleteDoc(doc(db, 'movies', movieId));
     setSelectedMovie(null);
+    setRandomMovie(null);
   };
-
-  const user1Movies = movies.filter(m => m.owners?.includes('sassdaboss'));
-  const user2Movies = movies.filter(m => m.owners?.includes('katherinefierce'));
-  const sharedMovies = movies.filter(m => m.owners?.includes('sassdaboss') && m.owners?.includes('katherinefierce'));
-  const unwatchedShared = sharedMovies.filter(m => !m.watched);
 
   const filterSort = (movieList) => {
     let f = movieList;
@@ -286,6 +336,12 @@ const WatchlistApp = () => {
     className="px-5 py-3 bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-400 hover:to-emerald-400 text-white font-bold rounded-xl transition-all"
     >
     ➕ Lisa
+    </button>
+    <button
+    onClick={() => setShowRandomizer(true)}
+    className="px-5 py-3 bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-400 hover:to-pink-400 text-white font-bold rounded-xl transition-all"
+    >
+    🎲 Random
     </button>
     </div>
 
@@ -452,6 +508,132 @@ const WatchlistApp = () => {
     </p>
     </footer>
     </div>
+
+    {/* Randomizer Modal */}
+    {showRandomizer && (
+      <div
+      className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+      onClick={(e) => {
+        if (e.target === e.currentTarget && !isSpinning) {
+          setShowRandomizer(false);
+          setRandomMovie(null);
+        }
+      }}
+      >
+      <div className="bg-slate-900 w-full max-w-md rounded-2xl overflow-hidden">
+      <div className="p-6">
+      <div className="flex items-center justify-between mb-6">
+      <h2 className="text-2xl font-bold text-amber-100">🎲 Juhuslik film</h2>
+      {!isSpinning && (
+        <button
+        onClick={() => {
+          setShowRandomizer(false);
+          setRandomMovie(null);
+        }}
+        className="w-10 h-10 bg-slate-800 rounded-full flex items-center justify-center text-white text-xl"
+        >
+        ✕
+        </button>
+      )}
+      </div>
+
+      {!randomMovie && !isSpinning && (
+        <div className="space-y-3">
+        <p className="text-amber-200/60 text-center mb-4">Vali, millisest nimekirjast:</p>
+        <button
+        onClick={() => pickRandomMovie('shared')}
+        className="w-full py-4 bg-gradient-to-r from-rose-500 to-pink-500 hover:from-rose-400 hover:to-pink-400 text-white font-bold rounded-xl transition-all text-lg"
+        >
+        💕 Ühised ({unwatchedShared.length} vaatamata)
+        </button>
+        <button
+        onClick={() => pickRandomMovie('sassdaboss')}
+        className="w-full py-4 bg-gradient-to-r from-cyan-500 to-blue-500 hover:from-cyan-400 hover:to-blue-400 text-white font-bold rounded-xl transition-all text-lg"
+        >
+        👤 sassdaboss ({user1Movies.filter(m => !m.watched).length} vaatamata)
+        </button>
+        <button
+        onClick={() => pickRandomMovie('katherinefierce')}
+        className="w-full py-4 bg-gradient-to-r from-rose-400 to-red-500 hover:from-rose-300 hover:to-red-400 text-white font-bold rounded-xl transition-all text-lg"
+        >
+        👤 katherinefierce ({user2Movies.filter(m => !m.watched).length} vaatamata)
+        </button>
+        <button
+        onClick={() => pickRandomMovie('all')}
+        className="w-full py-4 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 text-white font-bold rounded-xl transition-all text-lg"
+        >
+        🎬 Kõik ({movies.filter(m => !m.watched).length} vaatamata)
+        </button>
+        </div>
+      )}
+
+      {(randomMovie || isSpinning) && (
+        <div className="text-center">
+        <div className={`relative ${isSpinning ? 'animate-pulse' : ''}`}>
+        {randomMovie?.poster ? (
+          <img
+          src={`${TMDB_IMG_BASE}${randomMovie.poster}`}
+          alt={randomMovie.title}
+          className="w-48 h-72 object-cover rounded-xl mx-auto shadow-2xl"
+          />
+        ) : (
+          <div className="w-48 h-72 bg-slate-800 rounded-xl mx-auto flex items-center justify-center">
+          <span className="text-6xl">🎬</span>
+          </div>
+        )}
+        {isSpinning && (
+          <div className="absolute inset-0 flex items-center justify-center">
+          <div className="text-6xl animate-spin">🎲</div>
+          </div>
+        )}
+        </div>
+
+        {randomMovie && (
+          <div className="mt-4">
+          <h3 className="text-xl font-bold text-amber-100">{randomMovie.title}</h3>
+          {randomMovie.year && <p className="text-amber-200/60">{randomMovie.year}</p>}
+
+          {randomMovie.providers?.length > 0 && (
+            <div className="flex justify-center gap-2 mt-2">
+            {randomMovie.providers.map(p => {
+              const platform = PLATFORMS.find(pl => pl.id === p);
+              return platform ? (
+                <span key={p} className="text-2xl" title={platform.name}>
+                {platform.icon}
+                </span>
+              ) : null;
+            })}
+            </div>
+          )}
+          </div>
+        )}
+
+        {!isSpinning && randomMovie && (
+          <div className="mt-6 space-y-3">
+          <button
+          onClick={() => {
+            setSelectedMovie(randomMovie);
+            setShowRandomizer(false);
+            setRandomMovie(null);
+          }}
+          className="w-full py-3 bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-400 hover:to-emerald-400 text-white font-bold rounded-xl transition-all"
+          >
+          ✅ Vaata seda!
+          </button>
+          <button
+          onClick={() => setRandomMovie(null)}
+          className="w-full py-3 bg-slate-700 hover:bg-slate-600 text-white font-bold rounded-xl transition-all"
+          >
+          🎲 Proovi uuesti
+          </button>
+          </div>
+        )}
+        </div>
+      )}
+      </div>
+      </div>
+      </div>
+    )}
 
     {/* Movie Detail Modal */}
     {selectedMovie && (
