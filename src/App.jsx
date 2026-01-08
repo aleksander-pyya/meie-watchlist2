@@ -14,11 +14,10 @@ const firebaseConfig = {
 const TMDB_API_KEY = 'ee832f30efb14e179654a4803a61bfcd';
 const TMDB_IMG_BASE = 'https://image.tmdb.org/t/p/w300';
 
-// Provider IDs from TMDB for Estonia (EE)
 const PROVIDER_IDS = {
   netflix: 8,
   disney: 337,
-  hbo: 384, // HBO Max
+  hbo: 384,
 };
 
 const PLATFORMS = [
@@ -43,7 +42,8 @@ const WatchlistApp = () => {
   const [tmdbResults, setTmdbResults] = useState([]);
   const [searching, setSearching] = useState(false);
   const [selectedOwner, setSelectedOwner] = useState('sassdaboss');
-  const [loadingProviders, setLoadingProviders] = useState({});
+  const [selectedMovie, setSelectedMovie] = useState(null);
+  const [loadingProviders, setLoadingProviders] = useState(false);
 
   useEffect(() => {
     const q = query(collection(db, 'movies'), orderBy('title'));
@@ -58,10 +58,18 @@ const WatchlistApp = () => {
     return () => unsubscribe();
   }, []);
 
-  const fetchProviders = async (movie) => {
-    if (!movie.tmdbId || movie.providers) return;
+  // Update selected movie when movies change
+  useEffect(() => {
+    if (selectedMovie) {
+      const updated = movies.find(m => m.id === selectedMovie.id);
+      if (updated) setSelectedMovie(updated);
+    }
+  }, [movies]);
 
-    setLoadingProviders(prev => ({ ...prev, [movie.id]: true }));
+  const fetchProviders = async (movie) => {
+    if (!movie.tmdbId) return;
+
+    setLoadingProviders(true);
 
     try {
       const res = await fetch(
@@ -69,7 +77,6 @@ const WatchlistApp = () => {
       );
       const data = await res.json();
 
-      // Check Estonian (EE) providers, fallback to US
       const regionData = data.results?.EE || data.results?.US || {};
       const flatrate = regionData.flatrate || [];
 
@@ -78,7 +85,6 @@ const WatchlistApp = () => {
       if (flatrate.some(p => p.provider_id === PROVIDER_IDS.disney)) providers.push('disney');
       if (flatrate.some(p => p.provider_id === PROVIDER_IDS.hbo)) providers.push('hbo');
 
-      // Keep existing go3 if manually set
       if (movie.providers?.includes('go3')) providers.push('go3');
 
       await updateDoc(doc(db, 'movies', movie.id), { providers });
@@ -86,7 +92,7 @@ const WatchlistApp = () => {
       console.error('Provider fetch error:', err);
     }
 
-    setLoadingProviders(prev => ({ ...prev, [movie.id]: false }));
+    setLoadingProviders(false);
   };
 
   const togglePlatform = async (movie, platform) => {
@@ -155,6 +161,7 @@ const WatchlistApp = () => {
 
     if (newOwners.length === 0) {
       await deleteDoc(doc(db, 'movies', movie.id));
+      setSelectedMovie(null);
     } else {
       await updateDoc(doc(db, 'movies', movie.id), { owners: newOwners });
     }
@@ -166,6 +173,7 @@ const WatchlistApp = () => {
 
   const deleteMovie = async (movieId) => {
     await deleteDoc(doc(db, 'movies', movieId));
+    setSelectedMovie(null);
   };
 
   const user1Movies = movies.filter(m => m.owners?.includes('sassdaboss'));
@@ -176,18 +184,15 @@ const WatchlistApp = () => {
   const filterSort = (movieList) => {
     let f = movieList;
 
-    // Search filter
     if (searchQuery) {
       const q = searchQuery.toLowerCase();
       f = f.filter(m => m.title.toLowerCase().includes(q) || (m.year && m.year.toString().includes(q)));
     }
 
-    // Platform filter
     if (filterPlatform !== 'all') {
       f = f.filter(m => m.providers?.includes(filterPlatform));
     }
 
-    // Sort
     return f.sort((a, b) => {
       if (sortBy === 'year') return (b.year || 0) - (a.year || 0);
       return a.title.localeCompare(b.title);
@@ -227,19 +232,19 @@ const WatchlistApp = () => {
 
     <div className="relative max-w-7xl mx-auto px-4 py-8">
     <header className="text-center mb-10">
-    <h1 className="text-5xl md:text-6xl font-black mb-3">
+    <h1 className="text-4xl sm:text-5xl md:text-6xl font-black mb-3">
     <span className="bg-gradient-to-r from-amber-300 via-orange-400 to-rose-400 bg-clip-text text-transparent">
     Meie Watchlist
     </span>
-    <span className="ml-3">💕</span>
+    <span className="ml-2">💕</span>
     </h1>
     <p className="text-amber-200/60 text-lg">sassdaboss & katherinefierce</p>
     </header>
 
     {activeTab === 'shared' && unwatchedShared.length > 0 && (
-      <div className="mb-8 p-6 bg-gradient-to-r from-rose-500/10 via-pink-500/10 to-orange-500/10 rounded-2xl border border-rose-500/20 text-center">
-      <p className="text-xl text-rose-100">
-      🎉 Teil on <span className="font-bold text-rose-300 text-2xl">{unwatchedShared.length}</span> vaatamata ühist filmi! 🎉
+      <div className="mb-8 p-4 sm:p-6 bg-gradient-to-r from-rose-500/10 via-pink-500/10 to-orange-500/10 rounded-2xl border border-rose-500/20 text-center">
+      <p className="text-lg sm:text-xl text-rose-100">
+      🎉 Teil on <span className="font-bold text-rose-300 text-xl sm:text-2xl">{unwatchedShared.length}</span> vaatamata ühist filmi! 🎉
       </p>
       </div>
     )}
@@ -249,14 +254,14 @@ const WatchlistApp = () => {
       <button
       key={tab.id}
       onClick={() => setActiveTab(tab.id)}
-      className={`px-5 py-3 rounded-xl font-semibold transition-all duration-300 ${
+      className={`px-3 sm:px-5 py-2 sm:py-3 rounded-xl font-semibold transition-all duration-300 text-sm sm:text-base ${
         activeTab === tab.id
         ? 'bg-gradient-to-r from-amber-500 to-orange-500 text-slate-900 shadow-lg shadow-amber-500/30 scale-105'
         : 'bg-slate-800/60 text-amber-200/80 hover:bg-slate-700/60'
       }`}
       >
       {tab.label}
-      <span className={`ml-2 px-2 py-0.5 rounded-full text-xs font-bold ${activeTab === tab.id ? 'bg-slate-900/30' : 'bg-slate-700/60'}`}>
+      <span className={`ml-1 sm:ml-2 px-1.5 sm:px-2 py-0.5 rounded-full text-xs font-bold ${activeTab === tab.id ? 'bg-slate-900/30' : 'bg-slate-700/60'}`}>
       {tab.count}
       </span>
       </button>
@@ -264,7 +269,8 @@ const WatchlistApp = () => {
     </nav>
 
     {/* Filters */}
-    <div className="flex flex-col sm:flex-row gap-3 mb-6 max-w-4xl mx-auto">
+    <div className="flex flex-col gap-3 mb-6 max-w-4xl mx-auto">
+    <div className="flex flex-col sm:flex-row gap-3">
     <div className="relative flex-1">
     <input
     type="text"
@@ -275,25 +281,6 @@ const WatchlistApp = () => {
     />
     <span className="absolute left-4 top-1/2 -translate-y-1/2 text-xl">🔍</span>
     </div>
-    <select
-    value={sortBy}
-    onChange={(e) => setSortBy(e.target.value)}
-    className="px-4 py-3 bg-slate-800/60 border border-slate-700/50 rounded-xl text-amber-200 focus:outline-none cursor-pointer"
-    >
-    <option value="title">Tähestiku järgi</option>
-    <option value="year">Aasta järgi</option>
-    </select>
-    <select
-    value={filterPlatform}
-    onChange={(e) => setFilterPlatform(e.target.value)}
-    className="px-4 py-3 bg-slate-800/60 border border-slate-700/50 rounded-xl text-amber-200 focus:outline-none cursor-pointer"
-    >
-    <option value="all">🎬 Kõik platvormid</option>
-    <option value="netflix">🔴 Netflix</option>
-    <option value="disney">🏰 Disney+</option>
-    <option value="hbo">💜 HBO Max</option>
-    <option value="go3">🟢 Go3</option>
-    </select>
     <button
     onClick={() => setShowAddForm(!showAddForm)}
     className="px-5 py-3 bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-400 hover:to-emerald-400 text-white font-bold rounded-xl transition-all"
@@ -302,14 +289,37 @@ const WatchlistApp = () => {
     </button>
     </div>
 
+    <div className="flex flex-row gap-3">
+    <select
+    value={sortBy}
+    onChange={(e) => setSortBy(e.target.value)}
+    className="flex-1 px-4 py-3 bg-slate-800/60 border border-slate-700/50 rounded-xl text-amber-200 focus:outline-none cursor-pointer"
+    >
+    <option value="title">Tähestiku järgi</option>
+    <option value="year">Aasta järgi</option>
+    </select>
+    <select
+    value={filterPlatform}
+    onChange={(e) => setFilterPlatform(e.target.value)}
+    className="flex-1 px-4 py-3 bg-slate-800/60 border border-slate-700/50 rounded-xl text-amber-200 focus:outline-none cursor-pointer"
+    >
+    <option value="all">🎬 Kõik</option>
+    <option value="netflix">🔴 Netflix</option>
+    <option value="disney">🏰 Disney+</option>
+    <option value="hbo">💜 HBO Max</option>
+    <option value="go3">🟢 Go3</option>
+    </select>
+    </div>
+    </div>
+
     {showAddForm && (
-      <div className="mb-8 p-6 bg-slate-800/60 rounded-2xl max-w-2xl mx-auto">
+      <div className="mb-8 p-4 sm:p-6 bg-slate-800/60 rounded-2xl max-w-2xl mx-auto">
       <h3 className="text-amber-100 font-bold mb-4 text-lg">Lisa uus film</h3>
       <div className="flex gap-3 mb-4">
       <select
       value={selectedOwner}
       onChange={(e) => setSelectedOwner(e.target.value)}
-      className="px-4 py-3 bg-slate-700/50 border border-slate-600/50 rounded-xl text-amber-200 focus:outline-none cursor-pointer"
+      className="flex-1 px-4 py-3 bg-slate-700/50 border border-slate-600/50 rounded-xl text-amber-200 focus:outline-none cursor-pointer"
       >
       <option value="sassdaboss">sassdaboss</option>
       <option value="katherinefierce">katherinefierce</option>
@@ -360,13 +370,14 @@ const WatchlistApp = () => {
       </div>
     )}
 
-    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
+    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3 sm:gap-4">
     {displayMovies.map((movie) => {
       const isShared = movie.owners?.length === 2;
       return (
         <div
         key={movie.id}
-        className={`group relative bg-gradient-to-br from-slate-800/80 to-slate-900/80 rounded-xl overflow-hidden shadow-lg transition-all duration-300 hover:-translate-y-1 ${
+        onClick={() => setSelectedMovie(movie)}
+        className={`cursor-pointer relative bg-gradient-to-br from-slate-800/80 to-slate-900/80 rounded-xl overflow-hidden shadow-lg transition-all duration-300 active:scale-95 ${
           isShared ? 'ring-2 ring-rose-500/30' : ''
         } ${movie.watched ? 'opacity-60' : ''}`}
         >
@@ -385,85 +396,6 @@ const WatchlistApp = () => {
           </div>
           </div>
         )}
-
-        {/* Hover actions */}
-        <div className="absolute inset-0 bg-black/80 opacity-0 group-hover:opacity-100 transition-all flex flex-col items-center justify-center gap-2 p-3 overflow-y-auto">
-        <p className="text-amber-50 font-bold text-sm text-center line-clamp-2">{movie.title}</p>
-
-        <button
-        onClick={() => toggleWatched(movie)}
-        className={`w-full py-2 rounded-lg text-sm font-medium transition-all ${
-          movie.watched
-          ? 'bg-amber-500/80 hover:bg-amber-400 text-slate-900'
-          : 'bg-green-500/80 hover:bg-green-400 text-white'
-        }`}
-        >
-        {movie.watched ? '↩️ Vaatamata' : '✅ Nähtud'}
-        </button>
-
-        {/* Owner buttons */}
-        <div className="flex gap-1 w-full">
-        <button
-        onClick={() => toggleOwner(movie, 'sassdaboss')}
-        className={`flex-1 py-2 rounded-lg text-xs font-medium transition-all ${
-          movie.owners?.includes('sassdaboss')
-          ? 'bg-cyan-500 text-white'
-          : 'bg-slate-600 text-slate-300'
-        }`}
-        >
-        S
-        </button>
-        <button
-        onClick={() => toggleOwner(movie, 'katherinefierce')}
-        className={`flex-1 py-2 rounded-lg text-xs font-medium transition-all ${
-          movie.owners?.includes('katherinefierce')
-          ? 'bg-rose-500 text-white'
-          : 'bg-slate-600 text-slate-300'
-        }`}
-        >
-        K
-        </button>
-        </div>
-
-        {/* Platform buttons */}
-        <div className="w-full">
-        <div className="flex items-center justify-between mb-1">
-        <span className="text-amber-200/60 text-xs">Platvormid:</span>
-        {movie.tmdbId && !movie.providers?.length && (
-          <button
-          onClick={() => fetchProviders(movie)}
-          disabled={loadingProviders[movie.id]}
-          className="text-xs text-amber-400 hover:text-amber-300"
-          >
-          {loadingProviders[movie.id] ? '...' : '🔄 Otsi'}
-          </button>
-        )}
-        </div>
-        <div className="flex gap-1 flex-wrap">
-        {PLATFORMS.map(platform => (
-          <button
-          key={platform.id}
-          onClick={() => togglePlatform(movie, platform.id)}
-          className={`px-2 py-1 rounded text-xs font-medium transition-all ${
-            movie.providers?.includes(platform.id)
-            ? `${platform.color} text-white`
-            : 'bg-slate-600/50 text-slate-400'
-          }`}
-          title={platform.name}
-          >
-          {platform.icon}
-          </button>
-        ))}
-        </div>
-        </div>
-
-        <button
-        onClick={() => deleteMovie(movie.id)}
-        className="w-full py-2 bg-red-500/80 hover:bg-red-400 text-white rounded-lg text-sm font-medium transition-all"
-        >
-        🗑️ Kustuta
-        </button>
-        </div>
         </div>
 
         {/* Owner badges */}
@@ -479,7 +411,7 @@ const WatchlistApp = () => {
         {/* Platform badges */}
         {movie.providers?.length > 0 && (
           <div className="absolute top-2 right-2 flex gap-0.5">
-          {movie.providers.map(p => {
+          {movie.providers.slice(0, 3).map(p => {
             const platform = PLATFORMS.find(pl => pl.id === p);
             return platform ? (
               <span key={p} className="text-sm drop-shadow" title={platform.name}>
@@ -491,13 +423,13 @@ const WatchlistApp = () => {
         )}
 
         {movie.watched && (
-          <div className="absolute bottom-16 right-2">
+          <div className="absolute bottom-12 right-2">
           <span className="text-green-400 text-lg drop-shadow">✅</span>
           </div>
         )}
 
-        <div className="p-3">
-        <h3 className="font-semibold text-amber-50 text-sm leading-tight line-clamp-2">{movie.title}</h3>
+        <div className="p-2 sm:p-3">
+        <h3 className="font-semibold text-amber-50 text-xs sm:text-sm leading-tight line-clamp-2">{movie.title}</h3>
         {movie.year && <p className="text-amber-200/50 text-xs mt-1">{movie.year}</p>}
         </div>
         </div>
@@ -520,6 +452,129 @@ const WatchlistApp = () => {
     </p>
     </footer>
     </div>
+
+    {/* Movie Detail Modal */}
+    {selectedMovie && (
+      <div
+      className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-end sm:items-center justify-center p-0 sm:p-4"
+      onClick={(e) => {
+        if (e.target === e.currentTarget) setSelectedMovie(null);
+      }}
+      >
+      <div className="bg-slate-900 w-full sm:max-w-lg sm:rounded-2xl overflow-hidden max-h-[90vh] overflow-y-auto">
+      {/* Header with poster */}
+      <div className="relative">
+      {selectedMovie.poster ? (
+        <img
+        src={`${TMDB_IMG_BASE}${selectedMovie.poster}`}
+        alt={selectedMovie.title}
+        className="w-full h-48 sm:h-64 object-cover"
+        />
+      ) : (
+        <div className="w-full h-48 sm:h-64 bg-slate-800 flex items-center justify-center">
+        <span className="text-6xl">🎬</span>
+        </div>
+      )}
+      <div className="absolute inset-0 bg-gradient-to-t from-slate-900 via-transparent to-transparent" />
+      <button
+      onClick={() => setSelectedMovie(null)}
+      className="absolute top-4 right-4 w-10 h-10 bg-black/50 rounded-full flex items-center justify-center text-white text-xl"
+      >
+      ✕
+      </button>
+      <div className="absolute bottom-4 left-4 right-4">
+      <h2 className="text-2xl font-bold text-white mb-1">{selectedMovie.title}</h2>
+      {selectedMovie.year && <p className="text-amber-200/80">{selectedMovie.year}</p>}
+      </div>
+      </div>
+
+      <div className="p-4 sm:p-6 space-y-4">
+      {/* Watched toggle */}
+      <button
+      onClick={() => toggleWatched(selectedMovie)}
+      className={`w-full py-3 rounded-xl text-lg font-semibold transition-all ${
+        selectedMovie.watched
+        ? 'bg-amber-500 hover:bg-amber-400 text-slate-900'
+        : 'bg-green-500 hover:bg-green-400 text-white'
+      }`}
+      >
+      {selectedMovie.watched ? '↩️ Märgi vaatamata' : '✅ Märgi nähtuks'}
+      </button>
+
+      {/* Owner selection */}
+      <div>
+      <p className="text-amber-200/60 text-sm mb-2">Kelle listis:</p>
+      <div className="flex gap-2">
+      <button
+      onClick={() => toggleOwner(selectedMovie, 'sassdaboss')}
+      className={`flex-1 py-3 rounded-xl font-semibold transition-all ${
+        selectedMovie.owners?.includes('sassdaboss')
+        ? 'bg-cyan-500 text-white'
+        : 'bg-slate-700 text-slate-300'
+      }`}
+      >
+      👤 sassdaboss
+      </button>
+      <button
+      onClick={() => toggleOwner(selectedMovie, 'katherinefierce')}
+      className={`flex-1 py-3 rounded-xl font-semibold transition-all ${
+        selectedMovie.owners?.includes('katherinefierce')
+        ? 'bg-rose-500 text-white'
+        : 'bg-slate-700 text-slate-300'
+      }`}
+      >
+      👤 katherinefierce
+      </button>
+      </div>
+      </div>
+
+      {/* Platforms */}
+      <div>
+      <div className="flex items-center justify-between mb-2">
+      <p className="text-amber-200/60 text-sm">Saadaval:</p>
+      {selectedMovie.tmdbId && (
+        <button
+        onClick={() => fetchProviders(selectedMovie)}
+        disabled={loadingProviders}
+        className="text-sm text-amber-400 hover:text-amber-300 disabled:opacity-50"
+        >
+        {loadingProviders ? '⏳ Otsin...' : '🔄 Otsi automaatselt'}
+        </button>
+      )}
+      </div>
+      <div className="grid grid-cols-2 gap-2">
+      {PLATFORMS.map(platform => (
+        <button
+        key={platform.id}
+        onClick={() => togglePlatform(selectedMovie, platform.id)}
+        className={`py-3 rounded-xl font-medium transition-all flex items-center justify-center gap-2 ${
+          selectedMovie.providers?.includes(platform.id)
+          ? `${platform.color} text-white`
+          : 'bg-slate-700 text-slate-300'
+        }`}
+        >
+        <span className="text-xl">{platform.icon}</span>
+        <span>{platform.name}</span>
+        </button>
+      ))}
+      </div>
+      </div>
+
+      {/* Delete */}
+      <button
+      onClick={() => {
+        if (confirm('Kas oled kindel, et tahad selle filmi kustutada?')) {
+          deleteMovie(selectedMovie.id);
+        }
+      }}
+      className="w-full py-3 bg-red-500/20 hover:bg-red-500/30 text-red-400 rounded-xl font-semibold transition-all"
+      >
+      🗑️ Kustuta film
+      </button>
+      </div>
+      </div>
+      </div>
+    )}
     </div>
   );
 };
