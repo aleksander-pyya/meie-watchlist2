@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { initializeApp } from 'firebase/app';
 import { getFirestore, collection, addDoc, deleteDoc, doc, updateDoc, onSnapshot, query, orderBy } from 'firebase/firestore';
 
@@ -47,6 +47,8 @@ const WatchlistApp = () => {
   const [showRandomizer, setShowRandomizer] = useState(false);
   const [randomMovie, setRandomMovie] = useState(null);
   const [isSpinning, setIsSpinning] = useState(false);
+  const [movieOverview, setMovieOverview] = useState(null);
+  const [loadingOverview, setLoadingOverview] = useState(false);
 
   useEffect(() => {
     const q = query(collection(db, 'movies'), orderBy('title'));
@@ -71,6 +73,44 @@ const WatchlistApp = () => {
       if (updated) setRandomMovie(updated);
     }
   }, [movies]);
+
+  // Fetch overview when movie is selected
+  useEffect(() => {
+    if (selectedMovie?.tmdbId) {
+      fetchOverview(selectedMovie.tmdbId);
+    } else {
+      setMovieOverview(null);
+    }
+  }, [selectedMovie?.id]);
+
+  const fetchOverview = async (tmdbId) => {
+    setLoadingOverview(true);
+    setMovieOverview(null);
+
+    try {
+      // First try Estonian
+      const resEt = await fetch(
+        `https://api.themoviedb.org/3/movie/${tmdbId}?api_key=${TMDB_API_KEY}&language=et-EE`
+      );
+      const dataEt = await resEt.json();
+
+      if (dataEt.overview && dataEt.overview.trim()) {
+        setMovieOverview(dataEt.overview);
+      } else {
+        // Fallback to English
+        const resEn = await fetch(
+          `https://api.themoviedb.org/3/movie/${tmdbId}?api_key=${TMDB_API_KEY}&language=en-US`
+        );
+        const dataEn = await resEn.json();
+        setMovieOverview(dataEn.overview || null);
+      }
+    } catch (err) {
+      console.error('Overview fetch error:', err);
+      setMovieOverview(null);
+    }
+
+    setLoadingOverview(false);
+  };
 
   const user1Movies = movies.filter(m => m.owners?.includes('sassdaboss'));
   const user2Movies = movies.filter(m => m.owners?.includes('katherinefierce'));
@@ -101,7 +141,6 @@ const WatchlistApp = () => {
     setIsSpinning(true);
     setRandomMovie(null);
 
-    // Spinning animation - show random movies quickly
     let count = 0;
     const maxCount = 15;
     const interval = setInterval(() => {
@@ -112,7 +151,6 @@ const WatchlistApp = () => {
       if (count >= maxCount) {
         clearInterval(interval);
         setIsSpinning(false);
-        // Final pick
         const finalIndex = Math.floor(Math.random() * sourceMovies.length);
         setRandomMovie(sourceMovies[finalIndex]);
       }
@@ -671,6 +709,21 @@ const WatchlistApp = () => {
       </div>
 
       <div className="p-4 sm:p-6 space-y-4">
+      {/* Overview / Tutvustus */}
+      {(movieOverview || loadingOverview) && (
+        <div className="bg-slate-800/50 rounded-xl p-4">
+        <h3 className="text-amber-200/80 text-sm font-semibold mb-2">📖 Tutvustus</h3>
+        {loadingOverview ? (
+          <div className="flex items-center gap-2 text-amber-200/60">
+          <div className="w-4 h-4 border-2 border-amber-500 border-t-transparent rounded-full animate-spin"></div>
+          <span>Laadin...</span>
+          </div>
+        ) : (
+          <p className="text-amber-100/90 text-sm leading-relaxed">{movieOverview}</p>
+        )}
+        </div>
+      )}
+
       {/* Watched toggle */}
       <button
       onClick={() => toggleWatched(selectedMovie)}
