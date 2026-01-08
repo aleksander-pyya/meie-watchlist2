@@ -20,11 +20,20 @@ const PROVIDER_IDS = {
   hbo: 384,
 };
 
+// Color palette
+const COLORS = {
+  apricot: '#FCD9BE',
+  chartreuse: '#D6F74C',
+  vistaBlue: '#8C9EFF',
+  tomato: '#F06038',
+  dark: '#1a1a2e',
+};
+
 const PLATFORMS = [
-  { id: 'netflix', name: 'Netflix', icon: 'N', color: 'bg-red-600' },
-{ id: 'disney', name: 'Disney+', icon: 'D+', color: 'bg-blue-600' },
-{ id: 'hbo', name: 'HBO Max', icon: 'HBO', color: 'bg-purple-600' },
-{ id: 'go3', name: 'Go3', icon: 'G3', color: 'bg-green-600' },
+  { id: 'netflix', name: 'Netflix', icon: 'N' },
+{ id: 'disney', name: 'Disney+', icon: 'D+' },
+{ id: 'hbo', name: 'HBO', icon: 'HBO' },
+{ id: 'go3', name: 'Go3', icon: 'G3' },
 ];
 
 const app = initializeApp(firebaseConfig);
@@ -94,12 +103,6 @@ const RefreshIcon = ({ className = "w-5 h-5" }) => (
 const UndoIcon = ({ className = "w-5 h-5" }) => (
   <svg className={className} viewBox="0 0 24 24" fill="currentColor">
   <path d="M12.5 8c-2.65 0-5.05.99-6.9 2.6L2 7v9h9l-3.62-3.62c1.39-1.16 3.16-1.88 5.12-1.88 3.54 0 6.55 2.31 7.6 5.5l2.37-.78C21.08 11.03 17.15 8 12.5 8z"/>
-  </svg>
-);
-
-const StarIcon = ({ className = "w-5 h-5" }) => (
-  <svg className={className} viewBox="0 0 24 24" fill="currentColor">
-  <path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"/>
   </svg>
 );
 
@@ -370,58 +373,61 @@ const WatchlistApp = () => {
   );
 
   const tabs = [
-    { id: 'shared', label: 'Ühised', icon: HeartIcon, count: sharedMovies.length },
-    { id: 'all', label: 'Kõik', icon: FilmIcon, count: movies.length },
-    { id: 'user1', label: 'sassdaboss', icon: UserIcon, count: user1Movies.length },
-    { id: 'user2', label: 'katherinefierce', icon: UserIcon, count: user2Movies.length },
+    { id: 'shared', label: 'ÜHISED', icon: HeartIcon, count: sharedMovies.length },
+    { id: 'all', label: 'KÕIK', icon: FilmIcon, count: movies.length },
+    { id: 'user1', label: 'SASS', icon: UserIcon, count: user1Movies.length },
+    { id: 'user2', label: 'KATH', icon: UserIcon, count: user2Movies.length },
   ];
+
+  // Google Font import
+  const fontStyle = `
+  @import url('https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&display=swap');
+  * { font-family: 'Fredoka', sans-serif; }
+  `;
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center" style={{ background: 'linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #1a1a2e 100%)' }}>
+      <>
+      <style>{fontStyle}</style>
+      <div className="min-h-screen flex items-center justify-center" style={{ background: COLORS.vistaBlue }}>
       <div className="text-center">
-      <div className="mb-4">
-      <FilmIcon className="w-16 h-16 mx-auto animate-bounce" style={{ color: '#D6F74C' }} />
-      </div>
-      <p className="text-xl" style={{ color: '#FCD9BE' }}>Laadin filme...</p>
+      <FilmIcon className="w-20 h-20 mx-auto mb-4 animate-bounce" style={{ color: COLORS.chartreuse }} />
+      <p className="text-2xl font-bold uppercase tracking-wide" style={{ color: COLORS.dark }}>Laadin filme...</p>
       </div>
       </div>
+      </>
     );
   }
 
   return (
-    <div className="min-h-screen" style={{ background: 'linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #1a1a2e 100%)' }}>
-    {/* Decorative elements */}
-    <div className="fixed inset-0 overflow-hidden pointer-events-none">
-    <div className="absolute top-0 left-1/4 w-96 h-96 rounded-full blur-3xl opacity-20" style={{ background: '#D6F74C' }} />
-    <div className="absolute bottom-0 right-1/4 w-96 h-96 rounded-full blur-3xl opacity-20" style={{ background: '#F06038' }} />
-    <div className="absolute top-1/2 right-0 w-64 h-64 rounded-full blur-3xl opacity-10" style={{ background: '#8C9EFF' }} />
-    </div>
-
-    <div className="relative max-w-7xl mx-auto px-4 py-8">
+    <>
+    <style>{fontStyle}</style>
+    <div className="min-h-screen" style={{ background: COLORS.vistaBlue }}>
+    <div className="max-w-7xl mx-auto px-4 py-8">
     {/* Header */}
     <header className="text-center mb-10">
-    <div className="flex items-center justify-center gap-3 mb-3">
-    <StarIcon className="w-8 h-8 sm:w-10 sm:h-10" style={{ color: '#D6F74C' }} />
-    <h1 className="text-4xl sm:text-5xl md:text-6xl font-black tracking-tight" style={{ color: '#FCD9BE' }}>
+    <h1
+    className="text-5xl sm:text-6xl md:text-7xl font-bold uppercase tracking-tight mb-2"
+    style={{ color: COLORS.tomato }}
+    >
     Meie Watchlist
     </h1>
-    <StarIcon className="w-8 h-8 sm:w-10 sm:h-10" style={{ color: '#D6F74C' }} />
-    </div>
-    <p className="text-lg opacity-70" style={{ color: '#8C9EFF' }}>sassdaboss & katherinefierce</p>
+    <p
+    className="text-lg uppercase tracking-widest font-medium"
+    style={{ color: COLORS.dark }}
+    >
+    sassdaboss & katherinefierce
+    </p>
     </header>
 
     {/* Shared movies banner */}
     {activeTab === 'shared' && unwatchedShared.length > 0 && (
       <div
-      className="mb-8 p-4 sm:p-6 rounded-2xl text-center"
-      style={{
-        background: 'linear-gradient(135deg, rgba(240,96,56,0.15) 0%, rgba(214,247,76,0.15) 100%)',
-                                                              border: '1px solid rgba(240,96,56,0.3)'
-      }}
+      className="mb-8 p-5 rounded-2xl text-center"
+      style={{ background: COLORS.apricot }}
       >
-      <p className="text-lg sm:text-xl" style={{ color: '#FCD9BE' }}>
-      Teil on <span className="font-bold text-xl sm:text-2xl" style={{ color: '#D6F74C' }}>{unwatchedShared.length}</span> vaatamata ühist filmi!
+      <p className="text-xl font-semibold uppercase" style={{ color: COLORS.tomato }}>
+      Teil on <span className="text-3xl font-bold">{unwatchedShared.length}</span> vaatamata ühist filmi!
       </p>
       </div>
     )}
@@ -430,28 +436,23 @@ const WatchlistApp = () => {
     <nav className="flex flex-wrap justify-center gap-2 mb-6">
     {tabs.map(tab => {
       const IconComponent = tab.icon;
+      const isActive = activeTab === tab.id;
       return (
         <button
         key={tab.id}
         onClick={() => setActiveTab(tab.id)}
-        className={`px-3 sm:px-5 py-2 sm:py-3 rounded-xl font-semibold transition-all duration-300 text-sm sm:text-base flex items-center gap-2 ${
-          activeTab === tab.id ? 'scale-105 shadow-lg' : 'opacity-70 hover:opacity-100'
-        }`}
+        className="px-4 sm:px-6 py-3 rounded-xl font-bold transition-all duration-200 text-sm sm:text-base flex items-center gap-2 uppercase tracking-wide"
         style={{
-          background: activeTab === tab.id
-          ? 'linear-gradient(135deg, #F06038 0%, #D6F74C 100%)'
-          : 'rgba(140,158,255,0.2)',
-              color: activeTab === tab.id ? '#1a1a2e' : '#FCD9BE',
-              boxShadow: activeTab === tab.id ? '0 4px 20px rgba(240,96,56,0.3)' : 'none'
+          background: isActive ? COLORS.chartreuse : COLORS.apricot,
+          color: COLORS.tomato,
+          transform: isActive ? 'scale(1.05)' : 'scale(1)',
         }}
         >
         <IconComponent className="w-4 h-4 sm:w-5 sm:h-5" />
-        <span className="hidden sm:inline">{tab.label}</span>
+        <span>{tab.label}</span>
         <span
-        className="px-1.5 sm:px-2 py-0.5 rounded-full text-xs font-bold"
-        style={{
-          background: activeTab === tab.id ? 'rgba(26,26,46,0.3)' : 'rgba(140,158,255,0.3)'
-        }}
+        className="px-2 py-0.5 rounded-full text-xs font-bold"
+        style={{ background: isActive ? COLORS.tomato : COLORS.vistaBlue, color: isActive ? COLORS.chartreuse : COLORS.dark }}
         >
         {tab.count}
         </span>
@@ -468,34 +469,27 @@ const WatchlistApp = () => {
     type="text"
     value={searchQuery}
     onChange={(e) => setSearchQuery(e.target.value)}
-    placeholder="Otsi filme..."
-    className="w-full px-5 py-3 pl-12 rounded-xl focus:outline-none transition-all"
+    placeholder="OTSI FILME..."
+    className="w-full px-5 py-3 pl-12 rounded-xl font-medium uppercase tracking-wide focus:outline-none"
     style={{
-      background: 'rgba(140,158,255,0.15)',
-          border: '1px solid rgba(140,158,255,0.3)',
-          color: '#FCD9BE'
+      background: COLORS.apricot,
+      color: COLORS.tomato,
     }}
     />
-    <SearchIcon className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5" style={{ color: '#8C9EFF' }} />
+    <SearchIcon className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5" style={{ color: COLORS.tomato }} />
     </div>
     <button
     onClick={() => setShowAddForm(!showAddForm)}
-    className="px-5 py-3 rounded-xl font-bold transition-all flex items-center justify-center gap-2 hover:scale-105"
-    style={{
-      background: 'linear-gradient(135deg, #D6F74C 0%, #8C9EFF 100%)',
-          color: '#1a1a2e'
-    }}
+    className="px-6 py-3 rounded-xl font-bold transition-all flex items-center justify-center gap-2 uppercase tracking-wide hover:scale-105"
+    style={{ background: COLORS.chartreuse, color: COLORS.dark }}
     >
     <PlusIcon className="w-5 h-5" />
     <span>Lisa</span>
     </button>
     <button
     onClick={() => setShowRandomizer(true)}
-    className="px-5 py-3 rounded-xl font-bold transition-all flex items-center justify-center gap-2 hover:scale-105"
-    style={{
-      background: 'linear-gradient(135deg, #F06038 0%, #FCD9BE 100%)',
-          color: '#1a1a2e'
-    }}
+    className="px-6 py-3 rounded-xl font-bold transition-all flex items-center justify-center gap-2 uppercase tracking-wide hover:scale-105"
+    style={{ background: COLORS.tomato, color: COLORS.apricot }}
     >
     <DiceIcon className="w-5 h-5" />
     <span>Random</span>
@@ -506,12 +500,8 @@ const WatchlistApp = () => {
     <select
     value={sortBy}
     onChange={(e) => setSortBy(e.target.value)}
-    className="flex-1 px-4 py-3 rounded-xl focus:outline-none cursor-pointer"
-    style={{
-      background: 'rgba(140,158,255,0.15)',
-          border: '1px solid rgba(140,158,255,0.3)',
-          color: '#FCD9BE'
-    }}
+    className="flex-1 px-4 py-3 rounded-xl font-medium uppercase tracking-wide focus:outline-none cursor-pointer"
+    style={{ background: COLORS.apricot, color: COLORS.tomato }}
     >
     <option value="title">Tähestiku järgi</option>
     <option value="year">Aasta järgi</option>
@@ -519,12 +509,8 @@ const WatchlistApp = () => {
     <select
     value={filterPlatform}
     onChange={(e) => setFilterPlatform(e.target.value)}
-    className="flex-1 px-4 py-3 rounded-xl focus:outline-none cursor-pointer"
-    style={{
-      background: 'rgba(140,158,255,0.15)',
-          border: '1px solid rgba(140,158,255,0.3)',
-          color: '#FCD9BE'
-    }}
+    className="flex-1 px-4 py-3 rounded-xl font-medium uppercase tracking-wide focus:outline-none cursor-pointer"
+    style={{ background: COLORS.apricot, color: COLORS.tomato }}
     >
     <option value="all">Kõik platvormid</option>
     <option value="netflix">Netflix</option>
@@ -538,23 +524,16 @@ const WatchlistApp = () => {
     {/* Add form */}
     {showAddForm && (
       <div
-      className="mb-8 p-4 sm:p-6 rounded-2xl max-w-2xl mx-auto"
-      style={{
-        background: 'rgba(140,158,255,0.1)',
-                     border: '1px solid rgba(140,158,255,0.2)'
-      }}
+      className="mb-8 p-5 rounded-2xl max-w-2xl mx-auto"
+      style={{ background: COLORS.chartreuse }}
       >
-      <h3 className="font-bold mb-4 text-lg" style={{ color: '#FCD9BE' }}>Lisa uus film</h3>
+      <h3 className="font-bold mb-4 text-xl uppercase tracking-wide" style={{ color: COLORS.dark }}>Lisa uus film</h3>
       <div className="flex gap-3 mb-4">
       <select
       value={selectedOwner}
       onChange={(e) => setSelectedOwner(e.target.value)}
-      className="flex-1 px-4 py-3 rounded-xl focus:outline-none cursor-pointer"
-      style={{
-        background: 'rgba(26,26,46,0.5)',
-                     border: '1px solid rgba(140,158,255,0.3)',
-                     color: '#FCD9BE'
-      }}
+      className="flex-1 px-4 py-3 rounded-xl font-medium uppercase focus:outline-none cursor-pointer"
+      style={{ background: COLORS.apricot, color: COLORS.tomato }}
       >
       <option value="sassdaboss">sassdaboss</option>
       <option value="katherinefierce">katherinefierce</option>
@@ -566,17 +545,11 @@ const WatchlistApp = () => {
       value={tmdbSearch}
       onChange={(e) => setTmdbSearch(e.target.value)}
       placeholder="Otsi filmi nime järgi..."
-      className="w-full px-4 py-3 rounded-xl focus:outline-none"
-      style={{
-        background: 'rgba(26,26,46,0.5)',
-                     border: '1px solid rgba(140,158,255,0.3)',
-                     color: '#FCD9BE'
-      }}
+      className="w-full px-4 py-3 rounded-xl font-medium focus:outline-none"
+      style={{ background: COLORS.apricot, color: COLORS.tomato }}
       />
       {searching && (
-        <div className="absolute right-4 top-1/2 -translate-y-1/2">
-        <RefreshIcon className="w-5 h-5 animate-spin" style={{ color: '#D6F74C' }} />
-        </div>
+        <RefreshIcon className="absolute right-4 top-1/2 -translate-y-1/2 w-5 h-5 animate-spin" style={{ color: COLORS.tomato }} />
       )}
       </div>
 
@@ -586,13 +559,8 @@ const WatchlistApp = () => {
           <button
           key={movie.id}
           onClick={() => addMovieFromTMDB(movie)}
-          className="rounded-lg overflow-hidden transition-all text-left hover:scale-105"
-          style={{
-            background: 'rgba(26,26,46,0.5)',
-                                   border: '2px solid transparent'
-          }}
-          onMouseEnter={(e) => e.currentTarget.style.borderColor = '#D6F74C'}
-          onMouseLeave={(e) => e.currentTarget.style.borderColor = 'transparent'}
+          className="rounded-xl overflow-hidden transition-all text-left hover:scale-105"
+          style={{ background: COLORS.apricot }}
           >
           {movie.poster_path ? (
             <img
@@ -601,13 +569,13 @@ const WatchlistApp = () => {
             className="w-full aspect-[2/3] object-cover"
             />
           ) : (
-            <div className="w-full aspect-[2/3] flex items-center justify-center" style={{ background: 'rgba(140,158,255,0.2)' }}>
-            <FilmIcon className="w-10 h-10" style={{ color: '#8C9EFF' }} />
+            <div className="w-full aspect-[2/3] flex items-center justify-center" style={{ background: COLORS.vistaBlue }}>
+            <FilmIcon className="w-10 h-10" style={{ color: COLORS.dark }} />
             </div>
           )}
           <div className="p-2">
-          <p className="text-xs font-medium line-clamp-2" style={{ color: '#FCD9BE' }}>{movie.title}</p>
-          <p className="text-xs opacity-50" style={{ color: '#8C9EFF' }}>{movie.release_date?.split('-')[0]}</p>
+          <p className="text-xs font-semibold line-clamp-2" style={{ color: COLORS.tomato }}>{movie.title}</p>
+          <p className="text-xs font-medium" style={{ color: COLORS.vistaBlue }}>{movie.release_date?.split('-')[0]}</p>
           </div>
           </button>
         ))}
@@ -624,13 +592,13 @@ const WatchlistApp = () => {
         <div
         key={movie.id}
         onClick={() => setSelectedMovie(movie)}
-        className={`cursor-pointer relative rounded-xl overflow-hidden shadow-lg transition-all duration-300 active:scale-95 hover:scale-105 ${movie.watched ? 'opacity-60' : ''}`}
+        className={`cursor-pointer relative rounded-xl overflow-hidden transition-all duration-200 active:scale-95 hover:scale-105 ${movie.watched ? 'opacity-60' : ''}`}
         style={{
-          background: 'linear-gradient(135deg, rgba(26,26,46,0.9) 0%, rgba(22,33,62,0.9) 100%)',
-              border: isShared ? '2px solid rgba(240,96,56,0.5)' : '1px solid rgba(140,158,255,0.2)'
+          background: COLORS.apricot,
+          border: isShared ? `3px solid ${COLORS.tomato}` : 'none'
         }}
         >
-        <div className="aspect-[2/3] relative overflow-hidden" style={{ background: 'rgba(140,158,255,0.1)' }}>
+        <div className="aspect-[2/3] relative overflow-hidden" style={{ background: COLORS.vistaBlue }}>
         {movie.poster ? (
           <img
           src={`${TMDB_IMG_BASE}${movie.poster}`}
@@ -639,10 +607,7 @@ const WatchlistApp = () => {
           />
         ) : (
           <div className="w-full h-full flex items-center justify-center">
-          <div className="text-center p-3">
-          <FilmIcon className="w-10 h-10 mx-auto mb-2" style={{ color: '#8C9EFF' }} />
-          <p className="text-xs leading-tight line-clamp-3 opacity-60" style={{ color: '#FCD9BE' }}>{movie.title}</p>
-          </div>
+          <FilmIcon className="w-12 h-12" style={{ color: COLORS.chartreuse }} />
           </div>
         )}
         </div>
@@ -651,16 +616,16 @@ const WatchlistApp = () => {
         <div className="absolute top-2 left-2 flex gap-1">
         {movie.owners?.includes('sassdaboss') && (
           <span
-          className="px-1.5 py-0.5 text-[10px] font-bold rounded-full shadow"
-          style={{ background: '#8C9EFF', color: '#1a1a2e' }}
+          className="px-2 py-0.5 text-[10px] font-bold rounded-full uppercase"
+          style={{ background: COLORS.vistaBlue, color: COLORS.dark }}
           >
           S
           </span>
         )}
         {movie.owners?.includes('katherinefierce') && (
           <span
-          className="px-1.5 py-0.5 text-[10px] font-bold rounded-full shadow"
-          style={{ background: '#F06038', color: '#1a1a2e' }}
+          className="px-2 py-0.5 text-[10px] font-bold rounded-full uppercase"
+          style={{ background: COLORS.tomato, color: COLORS.apricot }}
           >
           K
           </span>
@@ -675,9 +640,8 @@ const WatchlistApp = () => {
             return platform ? (
               <span
               key={p}
-              className="text-[9px] font-bold px-1 rounded"
-              style={{ background: 'rgba(26,26,46,0.8)', color: '#D6F74C' }}
-              title={platform.name}
+              className="text-[8px] font-bold px-1.5 py-0.5 rounded"
+              style={{ background: COLORS.chartreuse, color: COLORS.dark }}
               >
               {platform.icon}
               </span>
@@ -688,13 +652,13 @@ const WatchlistApp = () => {
 
         {movie.watched && (
           <div className="absolute bottom-12 right-2">
-          <CheckIcon className="w-5 h-5" style={{ color: '#D6F74C' }} />
+          <CheckIcon className="w-6 h-6" style={{ color: COLORS.chartreuse }} />
           </div>
         )}
 
         <div className="p-2 sm:p-3">
-        <h3 className="font-semibold text-xs sm:text-sm leading-tight line-clamp-2" style={{ color: '#FCD9BE' }}>{movie.title}</h3>
-        {movie.year && <p className="text-xs mt-1 opacity-50" style={{ color: '#8C9EFF' }}>{movie.year}</p>}
+        <h3 className="font-semibold text-xs sm:text-sm leading-tight line-clamp-2" style={{ color: COLORS.tomato }}>{movie.title}</h3>
+        {movie.year && <p className="text-xs mt-1 font-medium" style={{ color: COLORS.vistaBlue }}>{movie.year}</p>}
         </div>
         </div>
       );
@@ -703,8 +667,8 @@ const WatchlistApp = () => {
 
     {displayMovies.length === 0 && (
       <div className="text-center py-20">
-      <FilmIcon className="w-16 h-16 mx-auto mb-4" style={{ color: '#8C9EFF', opacity: 0.5 }} />
-      <p className="text-lg opacity-60" style={{ color: '#FCD9BE' }}>
+      <FilmIcon className="w-20 h-20 mx-auto mb-4" style={{ color: COLORS.chartreuse }} />
+      <p className="text-xl font-bold uppercase" style={{ color: COLORS.dark }}>
       {searchQuery || filterPlatform !== 'all' ? 'Filme ei leitud' : 'Lisa esimene film!'}
       </p>
       </div>
@@ -712,7 +676,7 @@ const WatchlistApp = () => {
 
     {/* Footer */}
     <footer className="mt-12 text-center">
-    <p className="text-sm opacity-40" style={{ color: '#8C9EFF' }}>
+    <p className="text-sm font-medium uppercase tracking-wide" style={{ color: COLORS.dark }}>
     Kokku {movies.length} filmi · {sharedMovies.length} ühist · {movies.filter(m => m.watched).length} nähtud
     </p>
     </footer>
@@ -721,7 +685,7 @@ const WatchlistApp = () => {
     {/* Randomizer Modal */}
     {showRandomizer && (
       <div
-      className="fixed inset-0 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+      className="fixed inset-0 z-50 flex items-center justify-center p-4"
       style={{ background: 'rgba(26,26,46,0.9)' }}
       onClick={(e) => {
         if (e.target === e.currentTarget && !isSpinning) {
@@ -732,78 +696,40 @@ const WatchlistApp = () => {
       >
       <div
       className="w-full max-w-md rounded-2xl overflow-hidden"
-      style={{
-        background: 'linear-gradient(135deg, #1a1a2e 0%, #16213e 100%)',
-                        border: '1px solid rgba(140,158,255,0.3)'
-      }}
+      style={{ background: COLORS.vistaBlue }}
       >
       <div className="p-6">
       <div className="flex items-center justify-between mb-6">
-      <div className="flex items-center gap-2">
-      <DiceIcon className="w-6 h-6" style={{ color: '#D6F74C' }} />
-      <h2 className="text-2xl font-bold" style={{ color: '#FCD9BE' }}>Juhuslik film</h2>
-      </div>
+      <h2 className="text-2xl font-bold uppercase" style={{ color: COLORS.tomato }}>Juhuslik film</h2>
       {!isSpinning && (
         <button
-        onClick={() => {
-          setShowRandomizer(false);
-          setRandomMovie(null);
-        }}
-        className="w-10 h-10 rounded-full flex items-center justify-center transition-all hover:scale-110"
-        style={{ background: 'rgba(140,158,255,0.2)' }}
+        onClick={() => { setShowRandomizer(false); setRandomMovie(null); }}
+        className="w-10 h-10 rounded-full flex items-center justify-center"
+        style={{ background: COLORS.apricot }}
         >
-        <CloseIcon className="w-5 h-5" style={{ color: '#FCD9BE' }} />
+        <CloseIcon className="w-5 h-5" style={{ color: COLORS.tomato }} />
         </button>
       )}
       </div>
 
       {!randomMovie && !isSpinning && (
         <div className="space-y-3">
-        <p className="text-center mb-4 opacity-60" style={{ color: '#8C9EFF' }}>Vali, millisest nimekirjast:</p>
-        <button
-        onClick={() => pickRandomMovie('shared')}
-        className="w-full py-4 rounded-xl font-bold transition-all text-lg hover:scale-105 flex items-center justify-center gap-2"
-        style={{
-          background: 'linear-gradient(135deg, #F06038 0%, #FCD9BE 100%)',
-                                       color: '#1a1a2e'
-        }}
-        >
-        <HeartIcon className="w-5 h-5" />
-        Ühised ({unwatchedShared.length} vaatamata)
-        </button>
-        <button
-        onClick={() => pickRandomMovie('sassdaboss')}
-        className="w-full py-4 rounded-xl font-bold transition-all text-lg hover:scale-105 flex items-center justify-center gap-2"
-        style={{
-          background: 'linear-gradient(135deg, #8C9EFF 0%, #D6F74C 100%)',
-                                       color: '#1a1a2e'
-        }}
-        >
-        <UserIcon className="w-5 h-5" />
-        sassdaboss ({user1Movies.filter(m => !m.watched).length} vaatamata)
-        </button>
-        <button
-        onClick={() => pickRandomMovie('katherinefierce')}
-        className="w-full py-4 rounded-xl font-bold transition-all text-lg hover:scale-105 flex items-center justify-center gap-2"
-        style={{
-          background: 'linear-gradient(135deg, #F06038 0%, #8C9EFF 100%)',
-                                       color: '#1a1a2e'
-        }}
-        >
-        <UserIcon className="w-5 h-5" />
-        katherinefierce ({user2Movies.filter(m => !m.watched).length} vaatamata)
-        </button>
-        <button
-        onClick={() => pickRandomMovie('all')}
-        className="w-full py-4 rounded-xl font-bold transition-all text-lg hover:scale-105 flex items-center justify-center gap-2"
-        style={{
-          background: 'linear-gradient(135deg, #D6F74C 0%, #FCD9BE 100%)',
-                                       color: '#1a1a2e'
-        }}
-        >
-        <FilmIcon className="w-5 h-5" />
-        Kõik ({movies.filter(m => !m.watched).length} vaatamata)
-        </button>
+        <p className="text-center mb-4 font-medium uppercase" style={{ color: COLORS.dark }}>Vali nimekiri:</p>
+        {[
+          { key: 'shared', label: 'Ühised', count: unwatchedShared.length, bg: COLORS.tomato, color: COLORS.apricot },
+          { key: 'sassdaboss', label: 'sassdaboss', count: user1Movies.filter(m => !m.watched).length, bg: COLORS.chartreuse, color: COLORS.dark },
+                                       { key: 'katherinefierce', label: 'katherinefierce', count: user2Movies.filter(m => !m.watched).length, bg: COLORS.apricot, color: COLORS.tomato },
+                                       { key: 'all', label: 'Kõik', count: movies.filter(m => !m.watched).length, bg: COLORS.dark, color: COLORS.chartreuse },
+        ].map(item => (
+          <button
+          key={item.key}
+          onClick={() => pickRandomMovie(item.key)}
+          className="w-full py-4 rounded-xl font-bold text-lg uppercase tracking-wide hover:scale-105 transition-all"
+          style={{ background: item.bg, color: item.color }}
+          >
+          {item.label} ({item.count})
+          </button>
+        ))}
         </div>
       )}
 
@@ -814,78 +740,43 @@ const WatchlistApp = () => {
           <img
           src={`${TMDB_IMG_BASE}${randomMovie.poster}`}
           alt={randomMovie.title}
-          className="w-48 h-72 object-cover rounded-xl mx-auto shadow-2xl"
-          style={{ boxShadow: '0 8px 32px rgba(240,96,56,0.3)' }}
+          className="w-48 h-72 object-cover rounded-xl mx-auto"
           />
         ) : (
-          <div
-          className="w-48 h-72 rounded-xl mx-auto flex items-center justify-center"
-          style={{ background: 'rgba(140,158,255,0.2)' }}
-          >
-          <FilmIcon className="w-16 h-16" style={{ color: '#8C9EFF' }} />
+          <div className="w-48 h-72 rounded-xl mx-auto flex items-center justify-center" style={{ background: COLORS.apricot }}>
+          <FilmIcon className="w-16 h-16" style={{ color: COLORS.tomato }} />
           </div>
         )}
         {isSpinning && (
           <div className="absolute inset-0 flex items-center justify-center">
-          <DiceIcon className="w-16 h-16 animate-spin" style={{ color: '#D6F74C' }} />
+          <DiceIcon className="w-16 h-16 animate-spin" style={{ color: COLORS.chartreuse }} />
           </div>
         )}
         </div>
 
-        {randomMovie && (
+        {randomMovie && !isSpinning && (
+          <>
           <div className="mt-4">
-          <h3 className="text-xl font-bold" style={{ color: '#FCD9BE' }}>{randomMovie.title}</h3>
-          {randomMovie.year && <p className="opacity-60" style={{ color: '#8C9EFF' }}>{randomMovie.year}</p>}
-
-          {randomMovie.providers?.length > 0 && (
-            <div className="flex justify-center gap-2 mt-2">
-            {randomMovie.providers.map(p => {
-              const platform = PLATFORMS.find(pl => pl.id === p);
-              return platform ? (
-                <span
-                key={p}
-                className="text-sm font-bold px-2 py-1 rounded"
-                style={{ background: 'rgba(214,247,76,0.2)', color: '#D6F74C' }}
-                title={platform.name}
-                >
-                {platform.icon}
-                </span>
-              ) : null;
-            })}
-            </div>
-          )}
+          <h3 className="text-xl font-bold" style={{ color: COLORS.tomato }}>{randomMovie.title}</h3>
+          {randomMovie.year && <p className="font-medium" style={{ color: COLORS.dark }}>{randomMovie.year}</p>}
           </div>
-        )}
-
-        {!isSpinning && randomMovie && (
           <div className="mt-6 space-y-3">
           <button
-          onClick={() => {
-            setSelectedMovie(randomMovie);
-            setShowRandomizer(false);
-            setRandomMovie(null);
-          }}
-          className="w-full py-3 rounded-xl font-bold transition-all hover:scale-105 flex items-center justify-center gap-2"
-          style={{
-            background: 'linear-gradient(135deg, #D6F74C 0%, #8C9EFF 100%)',
-                                        color: '#1a1a2e'
-          }}
+          onClick={() => { setSelectedMovie(randomMovie); setShowRandomizer(false); setRandomMovie(null); }}
+          className="w-full py-3 rounded-xl font-bold uppercase hover:scale-105 transition-all"
+          style={{ background: COLORS.chartreuse, color: COLORS.dark }}
           >
-          <CheckIcon className="w-5 h-5" />
           Vaata seda!
           </button>
           <button
           onClick={() => setRandomMovie(null)}
-          className="w-full py-3 rounded-xl font-bold transition-all hover:scale-105 flex items-center justify-center gap-2"
-          style={{
-            background: 'rgba(140,158,255,0.2)',
-                                        color: '#FCD9BE'
-          }}
+          className="w-full py-3 rounded-xl font-bold uppercase hover:scale-105 transition-all"
+          style={{ background: COLORS.apricot, color: COLORS.tomato }}
           >
-          <DiceIcon className="w-5 h-5" />
           Proovi uuesti
           </button>
           </div>
+          </>
         )}
         </div>
       )}
@@ -897,70 +788,52 @@ const WatchlistApp = () => {
     {/* Movie Detail Modal */}
     {selectedMovie && (
       <div
-      className="fixed inset-0 backdrop-blur-sm z-50 flex items-end sm:items-center justify-center p-0 sm:p-4"
+      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4"
       style={{ background: 'rgba(26,26,46,0.9)' }}
-      onClick={(e) => {
-        if (e.target === e.currentTarget) setSelectedMovie(null);
-      }}
+      onClick={(e) => { if (e.target === e.currentTarget) setSelectedMovie(null); }}
       >
       <div
       className="w-full sm:max-w-lg sm:rounded-2xl overflow-hidden max-h-[90vh] overflow-y-auto"
-      style={{
-        background: 'linear-gradient(135deg, #1a1a2e 0%, #16213e 100%)',
-                       border: '1px solid rgba(140,158,255,0.3)'
-      }}
+      style={{ background: COLORS.vistaBlue }}
       >
-      {/* Header with poster */}
+      {/* Header */}
       <div className="relative">
       {selectedMovie.poster ? (
-        <img
-        src={`${TMDB_IMG_BASE}${selectedMovie.poster}`}
-        alt={selectedMovie.title}
-        className="w-full h-48 sm:h-64 object-cover"
-        />
+        <img src={`${TMDB_IMG_BASE}${selectedMovie.poster}`} alt={selectedMovie.title} className="w-full h-48 sm:h-64 object-cover" />
       ) : (
-        <div
-        className="w-full h-48 sm:h-64 flex items-center justify-center"
-        style={{ background: 'rgba(140,158,255,0.2)' }}
-        >
-        <FilmIcon className="w-16 h-16" style={{ color: '#8C9EFF' }} />
+        <div className="w-full h-48 sm:h-64 flex items-center justify-center" style={{ background: COLORS.apricot }}>
+        <FilmIcon className="w-16 h-16" style={{ color: COLORS.tomato }} />
         </div>
       )}
-      <div
-      className="absolute inset-0"
-      style={{ background: 'linear-gradient(to top, #1a1a2e 0%, transparent 100%)' }}
-      />
       <button
       onClick={() => setSelectedMovie(null)}
-      className="absolute top-4 right-4 w-10 h-10 rounded-full flex items-center justify-center transition-all hover:scale-110"
-      style={{ background: 'rgba(26,26,46,0.8)' }}
+      className="absolute top-4 right-4 w-10 h-10 rounded-full flex items-center justify-center"
+      style={{ background: COLORS.apricot }}
       >
-      <CloseIcon className="w-5 h-5" style={{ color: '#FCD9BE' }} />
+      <CloseIcon className="w-5 h-5" style={{ color: COLORS.tomato }} />
       </button>
-      <div className="absolute bottom-4 left-4 right-4">
-      <h2 className="text-2xl font-bold mb-1" style={{ color: '#FCD9BE' }}>{selectedMovie.title}</h2>
-      {selectedMovie.year && <p style={{ color: '#8C9EFF' }}>{selectedMovie.year}</p>}
-      </div>
       </div>
 
-      <div className="p-4 sm:p-6 space-y-4">
+      <div className="p-5 space-y-4">
+      <div>
+      <h2 className="text-2xl font-bold" style={{ color: COLORS.tomato }}>{selectedMovie.title}</h2>
+      {selectedMovie.year && <p className="font-medium" style={{ color: COLORS.dark }}>{selectedMovie.year}</p>}
+      </div>
+
       {/* Overview */}
       {(movieOverview || loadingOverview) && (
-        <div
-        className="rounded-xl p-4"
-        style={{ background: 'rgba(140,158,255,0.1)' }}
-        >
+        <div className="rounded-xl p-4" style={{ background: COLORS.apricot }}>
         <div className="flex items-center gap-2 mb-2">
-        <BookIcon className="w-4 h-4" style={{ color: '#D6F74C' }} />
-        <h3 className="text-sm font-semibold" style={{ color: '#8C9EFF' }}>Tutvustus</h3>
+        <BookIcon className="w-4 h-4" style={{ color: COLORS.tomato }} />
+        <h3 className="text-sm font-bold uppercase" style={{ color: COLORS.tomato }}>Tutvustus</h3>
         </div>
         {loadingOverview ? (
-          <div className="flex items-center gap-2" style={{ color: '#8C9EFF' }}>
-          <RefreshIcon className="w-4 h-4 animate-spin" />
-          <span>Laadin...</span>
+          <div className="flex items-center gap-2">
+          <RefreshIcon className="w-4 h-4 animate-spin" style={{ color: COLORS.tomato }} />
+          <span style={{ color: COLORS.tomato }}>Laadin...</span>
           </div>
         ) : (
-          <p className="text-sm leading-relaxed" style={{ color: '#FCD9BE' }}>{movieOverview}</p>
+          <p className="text-sm leading-relaxed" style={{ color: COLORS.dark }}>{movieOverview}</p>
         )}
         </div>
       )}
@@ -968,56 +841,29 @@ const WatchlistApp = () => {
       {/* Watched toggle */}
       <button
       onClick={() => toggleWatched(selectedMovie)}
-      className="w-full py-3 rounded-xl text-lg font-semibold transition-all hover:scale-105 flex items-center justify-center gap-2"
-      style={{
-        background: selectedMovie.watched
-        ? 'linear-gradient(135deg, #F06038 0%, #FCD9BE 100%)'
-        : 'linear-gradient(135deg, #D6F74C 0%, #8C9EFF 100%)',
-                       color: '#1a1a2e'
-      }}
+      className="w-full py-3 rounded-xl font-bold uppercase tracking-wide hover:scale-105 transition-all flex items-center justify-center gap-2"
+      style={{ background: selectedMovie.watched ? COLORS.tomato : COLORS.chartreuse, color: selectedMovie.watched ? COLORS.apricot : COLORS.dark }}
       >
-      {selectedMovie.watched ? (
-        <>
-        <UndoIcon className="w-5 h-5" />
-        Märgi vaatamata
-        </>
-      ) : (
-        <>
-        <CheckIcon className="w-5 h-5" />
-        Märgi nähtuks
-        </>
-      )}
+      {selectedMovie.watched ? <><UndoIcon className="w-5 h-5" /> Märgi vaatamata</> : <><CheckIcon className="w-5 h-5" /> Märgi nähtuks</>}
       </button>
 
       {/* Owner selection */}
       <div>
-      <p className="text-sm mb-2 opacity-60" style={{ color: '#8C9EFF' }}>Kelle listis:</p>
+      <p className="text-sm mb-2 font-medium uppercase" style={{ color: COLORS.dark }}>Kelle listis:</p>
       <div className="flex gap-2">
       <button
       onClick={() => toggleOwner(selectedMovie, 'sassdaboss')}
-      className="flex-1 py-3 rounded-xl font-semibold transition-all flex items-center justify-center gap-2"
-      style={{
-        background: selectedMovie.owners?.includes('sassdaboss')
-        ? '#8C9EFF'
-        : 'rgba(140,158,255,0.2)',
-                       color: selectedMovie.owners?.includes('sassdaboss') ? '#1a1a2e' : '#FCD9BE'
-      }}
+      className="flex-1 py-3 rounded-xl font-bold uppercase transition-all flex items-center justify-center gap-2"
+      style={{ background: selectedMovie.owners?.includes('sassdaboss') ? COLORS.chartreuse : COLORS.apricot, color: COLORS.dark }}
       >
-      <UserIcon className="w-4 h-4" />
-      sassdaboss
+      <UserIcon className="w-4 h-4" /> Sass
       </button>
       <button
       onClick={() => toggleOwner(selectedMovie, 'katherinefierce')}
-      className="flex-1 py-3 rounded-xl font-semibold transition-all flex items-center justify-center gap-2"
-      style={{
-        background: selectedMovie.owners?.includes('katherinefierce')
-        ? '#F06038'
-        : 'rgba(240,96,56,0.2)',
-                       color: selectedMovie.owners?.includes('katherinefierce') ? '#1a1a2e' : '#FCD9BE'
-      }}
+      className="flex-1 py-3 rounded-xl font-bold uppercase transition-all flex items-center justify-center gap-2"
+      style={{ background: selectedMovie.owners?.includes('katherinefierce') ? COLORS.tomato : COLORS.apricot, color: selectedMovie.owners?.includes('katherinefierce') ? COLORS.apricot : COLORS.dark }}
       >
-      <UserIcon className="w-4 h-4" />
-      katherinefierce
+      <UserIcon className="w-4 h-4" /> Kath
       </button>
       </div>
       </div>
@@ -1025,16 +871,11 @@ const WatchlistApp = () => {
       {/* Platforms */}
       <div>
       <div className="flex items-center justify-between mb-2">
-      <p className="text-sm opacity-60" style={{ color: '#8C9EFF' }}>Saadaval:</p>
+      <p className="text-sm font-medium uppercase" style={{ color: COLORS.dark }}>Saadaval:</p>
       {selectedMovie.tmdbId && (
-        <button
-        onClick={() => fetchProviders(selectedMovie)}
-        disabled={loadingProviders}
-        className="text-sm flex items-center gap-1 transition-all hover:opacity-80 disabled:opacity-50"
-        style={{ color: '#D6F74C' }}
-        >
+        <button onClick={() => fetchProviders(selectedMovie)} disabled={loadingProviders} className="text-sm flex items-center gap-1 font-medium" style={{ color: COLORS.tomato }}>
         <RefreshIcon className={`w-4 h-4 ${loadingProviders ? 'animate-spin' : ''}`} />
-        {loadingProviders ? 'Otsin...' : 'Otsi automaatselt'}
+        {loadingProviders ? 'Otsin...' : 'Otsi'}
         </button>
       )}
       </div>
@@ -1043,18 +884,13 @@ const WatchlistApp = () => {
         <button
         key={platform.id}
         onClick={() => togglePlatform(selectedMovie, platform.id)}
-        className="py-3 rounded-xl font-medium transition-all flex items-center justify-center gap-2"
+        className="py-3 rounded-xl font-bold transition-all flex items-center justify-center gap-2"
         style={{
-          background: selectedMovie.providers?.includes(platform.id)
-          ? platform.id === 'netflix' ? '#E50914'
-          : platform.id === 'disney' ? '#113CCF'
-          : platform.id === 'hbo' ? '#7B2481'
-          : '#00A651'
-          : 'rgba(140,158,255,0.2)',
-                                  color: selectedMovie.providers?.includes(platform.id) ? 'white' : '#FCD9BE'
+          background: selectedMovie.providers?.includes(platform.id) ? COLORS.chartreuse : COLORS.apricot,
+                                  color: COLORS.dark
         }}
         >
-        <span className="font-bold">{platform.icon}</span>
+        <span>{platform.icon}</span>
         <span>{platform.name}</span>
         </button>
       ))}
@@ -1063,25 +899,18 @@ const WatchlistApp = () => {
 
       {/* Delete */}
       <button
-      onClick={() => {
-        if (confirm('Kas oled kindel, et tahad selle filmi kustutada?')) {
-          deleteMovie(selectedMovie.id);
-        }
-      }}
-      className="w-full py-3 rounded-xl font-semibold transition-all flex items-center justify-center gap-2 hover:opacity-80"
-      style={{
-        background: 'rgba(240,96,56,0.2)',
-                       color: '#F06038'
-      }}
+      onClick={() => { if (confirm('Kustutada?')) deleteMovie(selectedMovie.id); }}
+      className="w-full py-3 rounded-xl font-bold uppercase tracking-wide transition-all flex items-center justify-center gap-2"
+      style={{ background: COLORS.apricot, color: COLORS.tomato }}
       >
-      <TrashIcon className="w-5 h-5" />
-      Kustuta film
+      <TrashIcon className="w-5 h-5" /> Kustuta
       </button>
       </div>
       </div>
       </div>
     )}
     </div>
+    </>
   );
 };
 
